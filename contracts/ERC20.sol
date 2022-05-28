@@ -10,8 +10,7 @@ contract ERC20 is IERC20 {
   mapping(address => mapping(address => uint256)) public _allowances;
 
   constructor(uint256 _initialSupply) {
-    _totalSupply = _initialSupply;
-    _balances[msg.sender] = _initialSupply;
+    mint(msg.sender, _initialSupply);
   }
 
   function totalSupply() external view returns (uint256) {
@@ -23,8 +22,8 @@ contract ERC20 is IERC20 {
   }
 
   function transfer(address to, uint256 amount) external returns (bool) {
-    require(_balances[msg.sender] >= amount);
-    require(to != address(0));
+    require(_balances[msg.sender] >= amount, "Not enough balance");
+    require(to != address(0), "Invalid recipient");
     _balances[msg.sender] -= amount;
     _balances[to] += amount;
     emit Transfer(msg.sender, to, amount);
@@ -36,7 +35,7 @@ contract ERC20 is IERC20 {
   }
 
   function approve(address spender, uint256 amount) external returns (bool) {
-    require(spender != address(0));
+    require(spender != address(0), "Invalid spender");
     _allowances[msg.sender][spender] = amount;
     emit Approval(msg.sender, spender, amount);
     return true;
@@ -47,16 +46,31 @@ contract ERC20 is IERC20 {
     address to,
     uint256 amount
   ) external returns (bool) {
-    require(from != address(0));
-    require(to != address(0));
-    require(amount <= _allowances[from][msg.sender]);
-    require(_balances[from] >= amount);
+    require(from != address(0), "Invalid from");
+    require(to != address(0), "Invalid to");
+    require(amount <= _allowances[from][msg.sender], "Not enough allowance");
+    require(_balances[from] >= amount, "Not enough balance");
     _balances[from] -= amount;
     _balances[to] += amount;
     if (_allowances[from][msg.sender] != MAXINT) {
       _allowances[from][msg.sender] -= amount;
     }
     emit Transfer(from, to, amount);
+    return true;
+  }
+
+  function mint(address to, uint256 amount) internal returns (bool) {
+    require(to != address(0), "Invalid recipient");
+    _totalSupply += amount;
+    _balances[to] += amount;
+    emit Transfer(address(0), to, amount);
+    return true;
+  }
+
+  function burn(uint256 amount) internal returns (bool) {
+    require(_balances[msg.sender] >= amount, "Not enough balance");
+    _balances[msg.sender] -= amount;
+    emit Transfer(msg.sender, address(0), amount);
     return true;
   }
 }
