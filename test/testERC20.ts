@@ -58,6 +58,21 @@ describe('ERC20', () => {
       let ownerToken = await ERC20.balanceOf(owner.address);
       expect(ownerToken).to.be.eq(50);
     });
+    it('transfer with amount 0, recipient balance', async () => {
+      await ERC20.transfer(addr1.address, 0);
+      let addr1Token = await ERC20.balanceOf(addr1.address);
+      expect(addr1Token).to.be.eq(100);
+    });
+    it('transfer with amount 0, sender balance', async () => {
+      await ERC20.transfer(addr1.address, 0);
+      let ownerToken = await ERC20.balanceOf(owner.address);
+      expect(ownerToken).to.be.eq(100);
+    });
+    it('transfer to self', async () => {
+      await ERC20.transfer(owner.address, 50);
+      let ownerToken = await ERC20.balanceOf(owner.address);
+      expect(ownerToken).to.be.eq(100);
+    });
     it('transfer fail by not enough balance', async () => {
       await expect(ERC20.transfer(addr1.address, 200)).to.be.revertedWith('Not enough balance');
     });
@@ -77,6 +92,30 @@ describe('ERC20', () => {
       await ERC20.connect(addr1).transferFrom(owner.address, addr2.address, 50);
       let addr2Token = await ERC20.balanceOf(addr2.address);
       expect(addr2Token).to.be.eq(150);
+    });
+    it('transferFrom with infinite allowance', async () => {
+      await ERC20.approve(addr1.address, constants.MaxUint256);
+      await ERC20.connect(addr1).transferFrom(owner.address, addr2.address, 50);
+      let addr1Allowance = await ERC20.allowance(owner.address, addr1.address);
+      expect(addr1Allowance).to.be.eq(constants.MaxUint256);
+    });
+    it('transferFrom with amount 0', async () => {
+      await ERC20.approve(addr1.address, 50);
+      await ERC20.connect(addr1).transferFrom(owner.address, addr2.address, 0);
+      let addr2Token = await ERC20.balanceOf(addr2.address);
+      expect(addr2Token).to.be.eq(100);
+    });
+    it('transferFrom with amount 0, owner balance', async () => {
+      await ERC20.approve(addr1.address, 50);
+      await ERC20.connect(addr1).transferFrom(owner.address, addr2.address, 0);
+      let ownerToken = await ERC20.balanceOf(owner.address);
+      expect(ownerToken).to.be.eq(100);
+    });
+    it('transfer to owner', async () => {
+      await ERC20.approve(addr1.address, 50);
+      await ERC20.connect(addr1).transferFrom(owner.address, owner.address, 50);
+      let ownerToken = await ERC20.balanceOf(owner.address);
+      expect(ownerToken).to.be.eq(100);
     });
     it('transferFrom fail by not enough allowance', async () => {
       await ERC20.approve(addr1.address, 50);
