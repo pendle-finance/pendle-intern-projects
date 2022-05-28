@@ -13,15 +13,15 @@ contract ERC20 is IERC20 {
     mint(msg.sender, _initialSupply);
   }
 
-  function totalSupply() external view returns (uint256) {
+  function totalSupply() external view override returns (uint256) {
     return _totalSupply;
   }
 
-  function balanceOf(address account) external view returns (uint256) {
+  function balanceOf(address account) external view override returns (uint256) {
     return _balances[account];
   }
 
-  function transfer(address to, uint256 amount) external returns (bool) {
+  function transfer(address to, uint256 amount) external override returns (bool) {
     require(_balances[msg.sender] >= amount, "Not enough balance");
     require(to != address(0), "Invalid recipient");
     _balances[msg.sender] -= amount;
@@ -30,11 +30,11 @@ contract ERC20 is IERC20 {
     return true;
   }
 
-  function allowance(address owner, address spender) external view returns (uint256) {
+  function allowance(address owner, address spender) external view override returns (uint256) {
     return _allowances[owner][spender];
   }
 
-  function approve(address spender, uint256 amount) external returns (bool) {
+  function approve(address spender, uint256 amount) external override returns (bool) {
     require(spender != address(0), "Invalid spender");
     _allowances[msg.sender][spender] = amount;
     emit Approval(msg.sender, spender, amount);
@@ -45,7 +45,7 @@ contract ERC20 is IERC20 {
     address from,
     address to,
     uint256 amount
-  ) external returns (bool) {
+  ) external override returns (bool) {
     require(from != address(0), "Invalid from");
     require(to != address(0), "Invalid to");
     require(amount <= _allowances[from][msg.sender], "Not enough allowance");
@@ -59,7 +59,7 @@ contract ERC20 is IERC20 {
     return true;
   }
 
-  function mint(address to, uint256 amount) internal returns (bool) {
+  function mint(address to, uint256 amount) public returns (bool) {
     require(to != address(0), "Invalid recipient");
     _totalSupply += amount;
     _balances[to] += amount;
@@ -67,7 +67,7 @@ contract ERC20 is IERC20 {
     return true;
   }
 
-  function burn(uint256 amount) internal returns (bool) {
+  function burn(uint256 amount) public returns (bool) {
     require(_balances[msg.sender] >= amount, "Not enough balance");
     _balances[msg.sender] -= amount;
     emit Transfer(msg.sender, address(0), amount);
