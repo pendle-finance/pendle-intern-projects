@@ -39,13 +39,18 @@ describe('ERC20', () => {
     expect(totalSupply).to.be.eq(400);
   });
 
-  it('owner mint', async () => {
-    let ownerToken = await ERC20.balanceOf(owner.address);
-    expect(ownerToken).to.be.eq(100);
-  });
-  it('addr1 mint', async () => {
-    let addr1Token = await ERC20.balanceOf(addr1.address);
-    expect(addr1Token).to.be.eq(100);
+  describe('mint', () => {
+    it('owner mint', async () => {
+      let ownerToken = await ERC20.balanceOf(owner.address);
+      expect(ownerToken).to.be.eq(100);
+    });
+    it('addr1 mint', async () => {
+      let addr1Token = await ERC20.balanceOf(addr1.address);
+      expect(addr1Token).to.be.eq(100);
+    });
+    it('mint failed by invalid address', async () => {
+      await expect(ERC20.connect(addr1).mint(constants.AddressZero, 100)).to.be.revertedWith('Invalid recipient');
+    });
   });
   describe('transfer', () => {
     it('recipient balance increase', async () => {
@@ -86,6 +91,9 @@ describe('ERC20', () => {
       await ERC20.approve(addr1.address, 50);
       let allowance = await ERC20.allowance(owner.address, addr1.address);
       expect(allowance).to.be.eq(50);
+    });
+    it('approve fail by invalid spender', async () => {
+      await expect(ERC20.approve(constants.AddressZero, 50)).to.be.revertedWith('Invalid spender');
     });
     it('transferFrom', async () => {
       await ERC20.approve(addr1.address, 50);
