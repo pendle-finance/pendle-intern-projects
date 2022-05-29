@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "./IERC20.sol";
 
 contract ERC20 is IERC20 {
-  uint256 constant MAXINT = 2**256 - 1;
+  uint256 public constant MAXINT = 2**256 - 1;
   uint256 public _totalSupply;
   mapping(address => uint256) public _balances;
   mapping(address => mapping(address => uint256)) public _allowances;
@@ -88,6 +88,8 @@ contract ERC20 is IERC20 {
     require(_balances[msg.sender] >= amount, "Not enough balance");
     //decrease the balance of the sender
     _balances[msg.sender] -= amount;
+    //decrease the total supply
+    _totalSupply -= amount;
     emit Transfer(msg.sender, address(0), amount);
     return true;
   }
