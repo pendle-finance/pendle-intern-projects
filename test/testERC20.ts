@@ -72,5 +72,14 @@ describe("TestERC20", () => {
     expect(await erc20.balanceOf(admin.address)).to.be.eq(initialTotal - approveAmount);
     expect(await erc20.balanceOf(Bob.address)).to.be.eq(approveAmount);
     expect(await erc20.allowance(admin.address, Alice.address)).to.be.eq(0);
+
+    // await erc20.approve(Alice.address, 2**256-1);
+    // console.log(2**256-1);
+
+    // await erc20.connect(Alice).transferFrom(admin.address, Bob.address, approveAmount);
+
+    // expect(await erc20.balanceOf(admin.address)).to.be.eq(initialTotal - approveAmount);
+    // expect(await erc20.balanceOf(Bob.address)).to.be.eq(approveAmount);
+    // expect(await erc20.allowance(admin.address, Alice.address)).to.be.eq(2**256-1);
   });
 });
