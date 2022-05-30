@@ -90,4 +90,12 @@ contract ERC20 is IERC20 {
     balances[_to] += _amount;
     emit Transfer(_from, _to, _amount);
   }
+
+  function getName() external view returns (string memory) {
+    return name;
+  }
+
+  function getSymbol() external view returns (string memory) {
+    return symbol;
+  }
 }
