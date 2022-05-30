@@ -57,11 +57,12 @@ contract ERC20 is IERC20 {
     require(balance[from] >= amount, "not enough money from the owner");
     require(allowanceAmount[from][msg.sender] >= amount, "exceed the amount allowed");
 
-    if (allowanceAmount[from][msg.sender] != 2**256-1)  // The allowanceAmount is not infinity
-    {
-      allowanceAmount[from][msg.sender] -= amount; 
-    }
-
+    // if (allowanceAmount[from][msg.sender] != 2**256-1)  // The allowanceAmount is not infinity
+    // {
+    //   allowanceAmount[from][msg.sender] -= amount; 
+    // }
+    
+    allowanceAmount[from][msg.sender] -= amount; 
     balance[from] -= amount;
     balance[to] += amount;  // Hope no overflow here! Should depend on the designer
 
