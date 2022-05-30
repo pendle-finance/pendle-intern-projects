@@ -63,9 +63,9 @@ contract ERC20 is IERC20 {
     _balances[from] -= amount;
     _balances[to] += amount;
     // Update allowance only if the allowance is not infinity
-    if (_allowances[from][msg.sender] != MAXINT) {
-      _allowances[from][msg.sender] -= amount;
-    }
+    // if (_allowances[from][msg.sender] != MAXINT) {
+    _allowances[from][msg.sender] -= amount;
+    // }
     emit Transfer(from, to, amount);
     return true;
   }

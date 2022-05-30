@@ -53,6 +53,16 @@ describe('ERC20', () => {
     });
   });
   describe('transfer', () => {
+    it('transfer emit Transfer event', async () => {
+      expect(await ERC20.connect(addr1).transfer(addr2.address, 50))
+        .to.emit(ERC20, 'Transfer')
+        .withArgs(addr1.address, addr2.address, 50);
+    });
+    it('transfer zero amount emit Transfer event', async () => {
+      expect(await ERC20.connect(addr1).transfer(addr2.address, 0))
+        .to.emit(ERC20, 'Transfer')
+        .withArgs(addr1.address, addr2.address, 0);
+    });
     it('recipient balance increase', async () => {
       await ERC20.transfer(addr1.address, 50);
       let addr1Token = await ERC20.balanceOf(addr1.address);
@@ -92,21 +102,43 @@ describe('ERC20', () => {
       let allowance = await ERC20.allowance(owner.address, addr1.address);
       expect(allowance).to.be.eq(50);
     });
+    it('approve amount greater than balance', async () => {
+      await ERC20.approve(addr1.address, 200);
+      let allowance = await ERC20.allowance(owner.address, addr1.address);
+      expect(allowance).to.be.eq(200);
+    });
+    it('emit Approval event', async () => {
+      let result = await ERC20.connect(addr1).approve(addr2.address, 50);
+      expect(result).to.emit(ERC20, 'Approval').withArgs(addr1.address, addr2.address, 50);
+    });
+    it('emit approve to zero', async () => {
+      let result = await ERC20.connect(addr1).approve(addr2.address, 0);
+      expect(result).to.emit(ERC20, 'Approval').withArgs(addr1.address, addr2.address, 0);
+    });
+    it('approve self', async () => {
+      await ERC20.connect(addr1).approve(addr1.address, 50);
+      let allowance = await ERC20.allowance(addr1.address, addr1.address);
+      expect(allowance).to.be.eq(50);
+    });
     it('approve fail by invalid spender', async () => {
       await expect(ERC20.approve(constants.AddressZero, 50)).to.be.revertedWith('Invalid spender');
     });
     it('transferFrom', async () => {
-      await ERC20.approve(addr1.address, 50);
+      await ERC20.approve(addr1.address, 100);
       await ERC20.connect(addr1).transferFrom(owner.address, addr2.address, 50);
       let addr2Token = await ERC20.balanceOf(addr2.address);
+      let ownerToken = await ERC20.balanceOf(owner.address);
+      let addr1Allowance = await ERC20.allowance(owner.address, addr1.address);
+      expect(addr1Allowance).to.be.eq(50);
+      expect(ownerToken).to.be.eq(50);
       expect(addr2Token).to.be.eq(150);
     });
-    it('transferFrom with infinite allowance', async () => {
-      await ERC20.approve(addr1.address, constants.MaxUint256);
-      await ERC20.connect(addr1).transferFrom(owner.address, addr2.address, 50);
-      let addr1Allowance = await ERC20.allowance(owner.address, addr1.address);
-      expect(addr1Allowance).to.be.eq(constants.MaxUint256);
-    });
+    // it('transferFrom with infinite allowance', async () => {
+    //   await ERC20.approve(addr1.address, constants.MaxUint256);
+    //   await ERC20.connect(addr1).transferFrom(owner.address, addr2.address, 50);
+    //   let addr1Allowance = await ERC20.allowance(owner.address, addr1.address);
+    //   expect(addr1Allowance).to.be.eq(constants.MaxUint256);
+    // });
     it('transferFrom with amount 0', async () => {
       await ERC20.approve(addr1.address, 50);
       await ERC20.connect(addr1).transferFrom(owner.address, addr2.address, 0);
@@ -142,6 +174,16 @@ describe('ERC20', () => {
     });
     it('transferFrom fail by invalid sender', async () => {
       await expect(ERC20.transferFrom(constants.AddressZero, addr1.address, 50)).to.be.revertedWith('Invalid from');
+    });
+    it('transferFrom emit Transfer event', async () => {
+      await ERC20.approve(addr1.address, 50);
+      let result = await ERC20.connect(addr1).transferFrom(owner.address, addr2.address, 50);
+      expect(result).to.emit(ERC20, 'Transfer').withArgs(owner.address, addr2.address, 50);
+    });
+    it('transferFrom emit Transfer event with zero amount', async () => {
+      await ERC20.approve(addr1.address, 50);
+      let result = await ERC20.connect(addr1).transferFrom(owner.address, addr2.address, 0);
+      expect(result).to.emit(ERC20, 'Transfer').withArgs(owner.address, addr2.address, 0);
     });
   });
   describe('burn', () => {
