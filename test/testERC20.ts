@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { Contract, utils } from "ethers";
+import { Contract, utils, constants } from "ethers";
 import { ethers, waffle } from "hardhat";
 import { deploy, evm_revert, evm_snapshot } from "./helpers/hardhat-helpers";
 import { ERC20, TestContract } from "../typechain";
@@ -49,12 +49,24 @@ describe("TestERC20", () => {
   it("transfer successfully", async () => {
     let smallAmount = 126;  // admin transfers Alice
     let smallerAmount = 12;  // Alice transfers Bob
-    await erc20.transfer(Alice.address, smallAmount);        
-    await erc20.connect(Alice).transfer(Bob.address, smallerAmount);
+    let adminToAliceTransfer =  await erc20.transfer(Alice.address, smallAmount);        
+    let AliceToBobTransfer =  await erc20.connect(Alice).transfer(Bob.address, smallerAmount);
+
+    expect(adminToAliceTransfer).to.emit(erc20, 'Transfer').withArgs(admin.address, Alice.address, smallAmount);
+    expect(AliceToBobTransfer).to.emit(erc20, 'Transfer').withArgs(Alice.address, Bob.address, smallerAmount);
+
     expect(await erc20.balanceOf(admin.address)).to.be.eq(initialTotal - smallAmount);
     expect(await erc20.balanceOf(Alice.address)).to.be.eq(smallAmount - smallerAmount);
     expect(await erc20.balanceOf(Bob.address)).to.be.eq(smallerAmount);
   });
+
+  it("transfer failed as expected", async () => {
+    let amount = initialTotal + 1;  // admin trys to transfer to Alice
+
+    await expect(erc20.transfer(Alice.address, amount)).to.be.revertedWith("Not enough balance to transfer");
+
+    await expect(erc20.transfer(constants.AddressZero, 0)).to.be.revertedWith("invalid receiver");
+  });  
 
   it("approve successfully", async () => {
     let approveAmount = 20;
@@ -67,19 +79,27 @@ describe("TestERC20", () => {
     let approveAmount = 20;
     await erc20.approve(Alice.address, approveAmount);
 
-    await erc20.connect(Alice).transferFrom(admin.address, Bob.address, approveAmount);
+    let transferFromAdminToBob =  await erc20.connect(Alice).transferFrom(admin.address, Bob.address, approveAmount);
+    expect(transferFromAdminToBob).to.emit(erc20, 'Transfer').withArgs(admin.address, Bob.address, approveAmount);
 
     expect(await erc20.balanceOf(admin.address)).to.be.eq(initialTotal - approveAmount);
     expect(await erc20.balanceOf(Bob.address)).to.be.eq(approveAmount);
     expect(await erc20.allowance(admin.address, Alice.address)).to.be.eq(0);
+  });
 
-    // await erc20.approve(Alice.address, 2**256-1);
-    // console.log(2**256-1);
+  it("transferFrom failed as expected", async () => {
+    let approveAmount = 20;
+    let smallerApproveAmount = 10;
+    await erc20.connect(Alice).approve(admin.address, approveAmount);  
 
-    // await erc20.connect(Alice).transferFrom(admin.address, Bob.address, approveAmount);
+    let smallAmount = 15;  // admin transfers Alice
+    await erc20.transfer(Alice.address, smallAmount);  // Alice has 15   
 
-    // expect(await erc20.balanceOf(admin.address)).to.be.eq(initialTotal - approveAmount);
-    // expect(await erc20.balanceOf(Bob.address)).to.be.eq(approveAmount);
-    // expect(await erc20.allowance(admin.address, Alice.address)).to.be.eq(2**256-1);
+    await expect(erc20.transferFrom(constants.AddressZero, Bob.address, 0)).to.be.revertedWith("invalid sender");
+    await expect(erc20.transferFrom(Alice.address, constants.AddressZero, 0)).to.be.revertedWith("invalid receiver");
+    await expect(erc20.transferFrom(Alice.address, Bob.address, smallAmount + 1)).to.be.revertedWith("not enough money from the owner");
+
+    await erc20.connect(Alice).approve(admin.address, smallerApproveAmount);
+    await expect(erc20.transferFrom(Alice.address, Bob.address, smallerApproveAmount + 1)).to.be.revertedWith("exceed the amount allowed");
   });
 });
