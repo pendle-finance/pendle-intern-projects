@@ -34,7 +34,7 @@ contract ERC20 is IERC20 {
 
   function transfer(address to, uint256 amount) external returns (bool) {
     require(to != address(0), "Address [to] is zero");
-    require(balances[msg.sender] >= amount, "Insufficient balance");
+    require(balances[msg.sender] >= amount, "Insufficient balance to transfer");
     _transfer(msg.sender, to, amount);
     return true;
   }
@@ -57,8 +57,8 @@ contract ERC20 is IERC20 {
   ) external returns (bool) {
     require(from != address(0), "Address [from] is zero");
     require(to != address(0), "Address [to] is zero");
-    require(balances[from] >= amount, "Insufficient balance");
-    require(allowances[from][to] >= amount, "Insufficient allowance");
+    require(balances[from] >= amount, "Insufficient balance to transferfrom");
+    require(allowances[from][to] >= amount, "Insufficient allowance to transferfrom");
     _transfer(from, to, amount);
     if (allowances[from][to] != type(uint256).max) {
       allowances[from][to] -= amount;
@@ -68,14 +68,14 @@ contract ERC20 is IERC20 {
 
   //TODO: Are there vulnerabilities with the mint and burn function other than them being public(only for now)?
   function mint(address to, uint256 amount) public {
-    require(to != address(0), "Mint address is 0 address");
+    require(to != address(0), "Address [mint to] is zero");
     balances[to] += amount;
     _totalSupply += amount;
   }
 
   function burn(address to, uint256 amount) public {
-    require(to != address(0), "Burn address is 0 address");
-    require(balances[to] >= amount, "Insufficient balance");
+    require(to != address(0), "Address [burn to] is zero");
+    require(balances[to] >= amount, "Insufficient balance to burn");
     balances[to] -= amount;
     _totalSupply -= amount;
   }
