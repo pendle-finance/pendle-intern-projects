@@ -6,21 +6,22 @@ import "./IERC20.sol";
 contract ERC20 is IERC20 {
   uint256 _totalSupply;
   uint256 _maxSupply;
-  string name;
-  string symbol;
+  string _name;
+  string _symbol;
   address _owner;
 
   mapping(address => uint256) balances;
   mapping(address => mapping(address => uint256)) allowances;
 
   constructor(
-    string memory _name,
-    string memory _symbol,
+    string memory tokenName,
+    string memory tokenSymbol,
     uint256 _initialSupply
   ) {
-    name = _name;
-    symbol = _symbol;
+    _name = tokenName;
+    _symbol = tokenSymbol;
     _owner = msg.sender;
+    _totalSupply += _initialSupply;
     balances[msg.sender] = _initialSupply;
   }
 
@@ -45,6 +46,7 @@ contract ERC20 is IERC20 {
 
   //TODO: approve front-running attack?
   function approve(address spender, uint256 amount) external returns (bool) {
+    require(spender != address(0), "Address [spender] is zero");
     allowances[msg.sender][spender] = amount;
     emit Approval(msg.sender, spender, amount);
     return true;
@@ -91,11 +93,11 @@ contract ERC20 is IERC20 {
     emit Transfer(_from, _to, _amount);
   }
 
-  function getName() external view returns (string memory) {
-    return name;
+  function name() external view returns (string memory) {
+    return _name;
   }
 
-  function getSymbol() external view returns (string memory) {
-    return symbol;
+  function symbol() external view returns (string memory) {
+    return _symbol;
   }
 }
