@@ -2,13 +2,13 @@
 pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ERC20 is IERC20 {
+contract ERC20 is IERC20, Ownable {
   uint256 _totalSupply;
   uint256 _maxSupply;
   string _name;
   string _symbol;
-  address _owner;
 
   mapping(address => uint256) balances;
   mapping(address => mapping(address => uint256)) allowances;
@@ -20,7 +20,6 @@ contract ERC20 is IERC20 {
   ) {
     _name = tokenName;
     _symbol = tokenSymbol;
-    _owner = msg.sender;
     _totalSupply += _initialSupply;
     balances[msg.sender] = _initialSupply;
   }
@@ -69,13 +68,13 @@ contract ERC20 is IERC20 {
   }
 
   //TODO: Are there vulnerabilities with the mint and burn function other than them being public(only for now)?
-  function mint(address to, uint256 amount) public {
+  function mint(address to, uint256 amount) public onlyOwner {
     require(to != address(0), "Address [mint to] is zero");
     balances[to] += amount;
     _totalSupply += amount;
   }
 
-  function burn(address to, uint256 amount) public {
+  function burn(address to, uint256 amount) public onlyOwner {
     require(to != address(0), "Address [burn to] is zero");
     require(balances[to] >= amount, "Insufficient balance to burn");
     balances[to] -= amount;
