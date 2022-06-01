@@ -107,23 +107,24 @@ describe("Test ERC20 Contract", () => {
 
   it("Basic transferFrom test a->b", async () => {
     await erc20Contract.connect(a).approve(b.address,10);
-    await erc20Contract.connect(c).transferFrom(a.address,b.address,5);
+    await erc20Contract.connect(b).transferFrom(a.address,c.address,5);
 
     let aRemaining = await toNumber(await erc20Contract.balanceOf(a.address));
-    let bRemaining = await toNumber(await erc20Contract.balanceOf(b.address));
+    let cRemaining = await toNumber(await erc20Contract.balanceOf(c.address));
     let aApprovedB = await toNumber(await erc20Contract.allowance(a.address,b.address));
-
+    
     expect(aRemaining).to.be.eq(95);
-    expect(bRemaining).to.be.eq(105);
+    expect(cRemaining).to.be.eq(105);
     expect(aApprovedB).to.be.eq(5);
 
     await erc20Contract.connect(b).transferFrom(a.address,b.address,5);
     aRemaining = await toNumber(await erc20Contract.balanceOf(a.address));
-    bRemaining = await toNumber(await erc20Contract.balanceOf(b.address));
+    let bRemaining = await toNumber(await erc20Contract.balanceOf(b.address));
+    aApprovedB = await toNumber(await erc20Contract.allowance(a.address,b.address));
 
     expect(aRemaining).to.be.eq(90);
-    expect(bRemaining).to.be.eq(110);
-
+    expect(bRemaining).to.be.eq(105);
+    expect(aApprovedB).to.be.eq(0);
   });
 
   describe("Testing transfer specifications ", () => {
@@ -139,19 +140,19 @@ describe("Test ERC20 Contract", () => {
   describe("Testing transferFrom specifications ", () => {
     it("Test amount > balance", async () => {
       await erc20Contract.connect(a).approve(b.address,101);
-      await expect(erc20Contract.connect(c).transferFrom(a.address,b.address,101)).to.be.revertedWith("Insufficient balance to transferfrom");
+      await expect(erc20Contract.connect(b).transferFrom(a.address,b.address,101)).to.be.revertedWith("Insufficient balance to transferfrom");
     });
 
     it("Test amount > allowance", async () => {
       await erc20Contract.connect(a).approve(b.address,10);
-      await expect(erc20Contract.connect(c).transferFrom(a.address,b.address,11)).to.be.revertedWith("Insufficient allowance to transferfrom");
+      await expect(erc20Contract.connect(b).transferFrom(a.address,b.address,11)).to.be.revertedWith("Insufficient allowance to transferfrom");
     });
 
     it("0 address", async () => {
       await erc20Contract.connect(a).approve(b.address,10);
-      await erc20Contract.connect(c).transferFrom(a.address,b.address,5);
-      await expect(erc20Contract.connect(c).transferFrom(CONSTANTS.ZERO_ADDRESS,a.address,10)).to.be.revertedWith("Address [from] is zero");
-      await expect(erc20Contract.connect(c).transferFrom(a.address,CONSTANTS.ZERO_ADDRESS,10)).to.be.revertedWith("Address [to] is zero")
+      await erc20Contract.connect(b).transferFrom(a.address,b.address,5);
+      await expect(erc20Contract.connect(b).transferFrom(CONSTANTS.ZERO_ADDRESS,a.address,10)).to.be.revertedWith("Address [from] is zero");
+      await expect(erc20Contract.connect(b).transferFrom(a.address,CONSTANTS.ZERO_ADDRESS,10)).to.be.revertedWith("Address [to] is zero")
     });
   });
 
@@ -220,10 +221,11 @@ describe("Test ERC20 Contract", () => {
     });
   });
  
-  //TODO: When Ownable is used
   describe("Testing ownership of smart contract", () => {
-      it("C cannot transfer A tokens to itself", async () => {
+    it("Only owner can burn", async () => {
       await expect(erc20Contract.connect(d).burn(d.address,100)).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(erc20Contract.connect(admin).burn(d.address,100)).to.not.be.reverted;
     });
+
   });
 });

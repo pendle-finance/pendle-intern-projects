@@ -59,9 +59,9 @@ contract ERC20 is IERC20, Ownable {
     require(from != address(0), "Address [from] is zero");
     require(to != address(0), "Address [to] is zero");
     require(balances[from] >= amount, "Insufficient balance to transferfrom");
-    require(allowances[from][to] >= amount, "Insufficient allowance to transferfrom");
-    if (allowances[from][to] != type(uint256).max) {
-      allowances[from][to] -= amount;
+    require(allowances[from][msg.sender] >= amount, "Insufficient allowance to transferfrom");
+    if (allowances[from][msg.sender] != type(uint256).max) {
+      allowances[from][msg.sender] -= amount;
     }
     _transfer(from, to, amount);
     return true;
