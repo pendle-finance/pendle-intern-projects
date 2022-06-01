@@ -61,10 +61,10 @@ contract ERC20 is IERC20 {
     require(to != address(0), "Address [to] is zero");
     require(balances[from] >= amount, "Insufficient balance to transferfrom");
     require(allowances[from][to] >= amount, "Insufficient allowance to transferfrom");
-    _transfer(from, to, amount);
     if (allowances[from][to] != type(uint256).max) {
       allowances[from][to] -= amount;
     }
+    _transfer(from, to, amount);
     return true;
   }
 
