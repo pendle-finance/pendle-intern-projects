@@ -70,15 +70,15 @@ contract ERC20 is IERC20, Ownable {
   //TODO: Are there vulnerabilities with the mint and burn function other than them being public(only for now)?
   function mint(address to, uint256 amount) public onlyOwner {
     require(to != address(0), "Address [mint to] is zero");
-    balances[to] += amount;
     _totalSupply += amount;
+    balances[to] += amount;
   }
 
   function burn(address to, uint256 amount) public onlyOwner {
     require(to != address(0), "Address [burn to] is zero");
     require(balances[to] >= amount, "Insufficient balance to burn");
-    balances[to] -= amount;
     _totalSupply -= amount;
+    balances[to] -= amount;
   }
 
   //TODO: probably needa check if this is secure and whatever that is calling it is secure

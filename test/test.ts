@@ -227,5 +227,10 @@ describe("Test ERC20 Contract", () => {
       await expect(erc20Contract.connect(admin).burn(d.address,100)).to.not.be.reverted;
     });
 
+    it("Only owner can mint", async () => {
+      await expect(erc20Contract.connect(d).mint(d.address,100)).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(erc20Contract.connect(admin).mint(d.address,100)).to.not.be.reverted;
+    });
+
   });
 });
