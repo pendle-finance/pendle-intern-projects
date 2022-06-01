@@ -35,6 +35,23 @@ describe("Test ERC20 Contract", () => {
     await revertSnapshot();
   });
 
+  describe("Basic view functions tests", () => {
+    it("Test totalSupply", async () => {
+      let contractTotalSupply = await toNumber(await erc20Contract.totalSupply());
+      expect(contractTotalSupply).to.be.eq(100400)
+    });
+
+    it("Test token", async () => {
+      let contractName = await erc20Contract.name();
+      expect(contractName).to.be.eq("name");
+    });
+
+    it("Test symbol", async () => {
+      let contractName = await erc20Contract.symbol();
+      expect(contractName).to.be.eq("tok");
+    });
+  });
+
   it("Basic balance tests", async () => {
     let aRemaining = await toNumber(await erc20Contract.balanceOf(a.address));
     let bRemaining = await toNumber(await erc20Contract.balanceOf(b.address));
