@@ -188,7 +188,7 @@ describe("Test ERC20 Contract", () => {
   describe("Basic mint test", () => {
     it("Test mint increases totalSupply", async () => {
       let prevTotalSupply = await toNumber(await erc20Contract.totalSupply());
-      erc20Contract.mint(d.address,100);
+      await erc20Contract.mint(d.address,100);
       let curTotalSupply = await toNumber(await erc20Contract.totalSupply());
       let difference = curTotalSupply - prevTotalSupply;
       expect(difference).to.be.eq(100);
@@ -202,14 +202,14 @@ describe("Test ERC20 Contract", () => {
   describe("Basic burn test", () => {
     it("Test burn decreases totalSupply", async () => {
       let prevTotalSupply = await toNumber(await erc20Contract.totalSupply());
-      erc20Contract.burn(d.address,100);
+      await erc20Contract.burn(d.address,100);
       let curTotalSupply = await toNumber(await erc20Contract.totalSupply());
       let difference = prevTotalSupply - curTotalSupply;
       expect(difference).to.be.eq(100);
     });
     
     it("0 address", async () => {
-      await expect(erc20Contract.burn(CONSTANTS.ZERO_ADDRESS,100)).to.be.revertedWith("Address [burn to] is zero")
+      await expect(erc20Contract.burn(CONSTANTS.ZERO_ADDRESS,100)).to.be.revertedWith("Address [burn to] is zero");
     });
   });
 
@@ -222,6 +222,8 @@ describe("Test ERC20 Contract", () => {
  
   //TODO: When Ownable is used
   describe("Testing ownership of smart contract", () => {
-
+      it("C cannot transfer A tokens to itself", async () => {
+      await expect(erc20Contract.connect(d).burn(d.address,100)).to.be.revertedWith("Ownable: caller is not the owner");
+    });
   });
 });
