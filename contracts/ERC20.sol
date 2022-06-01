@@ -38,12 +38,14 @@ contract ERC20 is IERC20 {
   }
 
   function mint(address account, uint256 amount) public onlyOwner returns(bool) {
+    require(account != address(0), "account is zero :(");
     _totalSupply += amount;
     balances[account] += amount;
     return true;
   }
 
   function burn(address account, uint amount) public onlyOwner returns(bool) {
+    require(account != address(0), "account is zero :(");
     require(balances[account] >= amount, "he got nothing left :(");
     _totalSupply -= amount;
     balances[account] -= amount;
@@ -53,6 +55,7 @@ contract ERC20 is IERC20 {
   //IDK-WHAT-TO-CLASSIFY-THESE FUNCTIONS
 
   function transfer(address to, uint256 amount) external returns(bool) {
+    require(to != address(0), "recipient is zero :(");
     require(balances[msg.sender] >= amount, "too poor :(");
     balances[msg.sender] -= amount;
     balances[to] += amount;
@@ -61,6 +64,7 @@ contract ERC20 is IERC20 {
   }
 
   function approve(address spender, uint256 amount) external returns(bool) {
+    require(spender != address(0), "spender is zero :(");
     _allowance[msg.sender][spender] = amount;
     emit Approval(msg.sender, spender, amount);
     return true;
@@ -71,6 +75,8 @@ contract ERC20 is IERC20 {
     address to,
     uint256 amount
   ) external returns(bool) {
+    require(from != address(0), "sender is zero :(");
+    require(to != address(0), "receiver is zero :(");
     require(balances[from] >= amount, "sender too poor :(");
     require(_allowance[from][msg.sender] >= amount, "allowance too low :(");
     _allowance[from][msg.sender] -= amount;
