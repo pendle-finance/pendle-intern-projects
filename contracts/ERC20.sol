@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./IERC20.sol";
+import "./IERC20Metadata.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ERC20 is IERC20, Ownable {
-  uint256 _totalSupply;
-  uint256 _maxSupply;
-  string _name;
-  string _symbol;
+contract ERC20 is IERC20Metadata, Ownable {
+  uint256 private _totalSupply;
+  uint256 private _maxSupply;
+  string private _name;
+  string private _symbol;
+  uint8 private _decimals;
 
   mapping(address => uint256) balances;
   mapping(address => mapping(address => uint256)) allowances;
@@ -16,10 +17,12 @@ contract ERC20 is IERC20, Ownable {
   constructor(
     string memory tokenName,
     string memory tokenSymbol,
+    uint8 tokenDecimals,
     uint256 _initialSupply
   ) {
     _name = tokenName;
     _symbol = tokenSymbol;
+    _decimals = tokenDecimals;
     _totalSupply += _initialSupply;
     balances[msg.sender] = _initialSupply;
   }
@@ -98,5 +101,9 @@ contract ERC20 is IERC20, Ownable {
 
   function symbol() external view returns (string memory) {
     return _symbol;
+  }
+
+  function decimals() external view returns (uint8) {
+    return _decimals;
   }
 }

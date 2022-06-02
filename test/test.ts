@@ -15,8 +15,9 @@ describe("Test ERC20 Contract", () => {
     globalSnapshotId = await evm_snapshot();
     var tokenName = "name";
     var tokenSymbol = "tok";
+    var tokenDecimals = 18;
     var initialSupply = 100000;
-    erc20Contract = await deploy<ERC20>("ERC20",[tokenName,tokenSymbol,initialSupply]);
+    erc20Contract = await deploy<ERC20>("ERC20",[tokenName,tokenSymbol,tokenDecimals, initialSupply]);
     await erc20Contract.mint(a.address,100);
     await erc20Contract.mint(b.address,100);
     await erc20Contract.mint(c.address,100);
@@ -49,6 +50,11 @@ describe("Test ERC20 Contract", () => {
     it("Test symbol", async () => {
       let contractName = await erc20Contract.symbol();
       expect(contractName).to.be.eq("tok");
+    });
+
+    it("Test decimals", async () => {
+      let contractName = await erc20Contract.decimals();
+      expect(contractName).to.be.eq(18);
     });
   });
 
@@ -211,6 +217,10 @@ describe("Test ERC20 Contract", () => {
     
     it("0 address", async () => {
       await expect(erc20Contract.burn(CONSTANTS.ZERO_ADDRESS,100)).to.be.revertedWith("Address [burn to] is zero");
+    });
+
+    it("burn amount > balance", async () => {
+      await expect(erc20Contract.burn(d.address,101)).to.be.revertedWith("Insufficient balance to burn");
     });
   });
 
