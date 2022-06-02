@@ -15,7 +15,7 @@ describe('ERC20', () => {
   before(async () => {
     globalSnapshotId = await evm_snapshot();
     [owner, addr1, addr2, addr3] = await ethers.getSigners();
-    ERC20 = await deploy<ERC20>('ERC20', [100]);
+    ERC20 = await deploy<ERC20>('ERC20', [100, 'Test Token', 'TST', 18]);
     await ERC20.connect(addr1).mint(addr1.address, 100);
     await ERC20.connect(addr2).mint(addr2.address, 100);
     await ERC20.connect(addr3).mint(addr3.address, 100);
@@ -31,12 +31,30 @@ describe('ERC20', () => {
     await revertSnapshot();
   });
 
-  it('balance 1 is 100', async () => {
-    expect(await ERC20.balanceOf(addr1.address)).to.be.eq(100);
+  describe('name', () => {
+    it('returns the name of the token', async () => {
+      expect(await ERC20.name()).to.equal('Test Token');
+    });
   });
-  it('total supply is 400', async () => {
-    let totalSupply = await ERC20.totalSupply();
-    expect(totalSupply).to.be.eq(400);
+  describe('symbol', () => {
+    it('returns the symbol of the token', async () => {
+      expect(await ERC20.symbol()).to.equal('TST');
+    });
+  });
+  describe('decimals', () => {
+    it('returns the decimals of the token', async () => {
+      expect(await ERC20.decimals()).to.equal(18);
+    });
+  });
+
+  describe('balance', () => {
+    it('balance 1 is 100', async () => {
+      expect(await ERC20.balanceOf(addr1.address)).to.be.eq(100);
+    });
+    it('total supply is 400', async () => {
+      let totalSupply = await ERC20.totalSupply();
+      expect(totalSupply).to.be.eq(400);
+    });
   });
 
   describe('mint', () => {
@@ -123,6 +141,8 @@ describe('ERC20', () => {
     it('approve fail by invalid spender', async () => {
       await expect(ERC20.approve(constants.AddressZero, 50)).to.be.revertedWith('Invalid spender');
     });
+  });
+  describe('transferFrom', () => {
     it('transferFrom', async () => {
       await ERC20.approve(addr1.address, 100);
       await ERC20.connect(addr1).transferFrom(owner.address, addr2.address, 50);
