@@ -12,7 +12,7 @@ describe("TestContract", () => {
   before(async () => {
     globalSnapshotId = await evm_snapshot();
 
-    newERC20 = await deploy<ERC20>("ERC20", ["100000"]);
+    newERC20 = await deploy<ERC20>("ERC20", ["100000","Shiro","SRO","18"]);
 
     snapshotId = await evm_snapshot();
   });
