@@ -9,11 +9,15 @@ describe("Test ERC20", () => {
   let globalSnapshotId;
   let snapshotId;
   let erc20: ERC20;
+  let initialSupply = 1000;
+  let initialName = "Not placeholder";
+  let initialSymbol = "NPH";
+  let initialDecimals = 5;
+
   before(async () => {
     globalSnapshotId = await evm_snapshot();
     [] = await ethers.getSigners();
-
-    erc20 = await deploy<ERC20>("ERC20", [1000]);
+    erc20 = await deploy<ERC20>("ERC20", [initialSupply, initialName, initialSymbol, initialDecimals]);
 
     snapshotId = await evm_snapshot();
   });
@@ -28,17 +32,31 @@ describe("Test ERC20", () => {
   });
 
   describe("view only functions", () => {
+    it("test name", async () => {
+      expect(await erc20.name()).to.be.eq(initialName);
+    });
+    
+    it("test symbol", async () => {
+      expect(await erc20.symbol()).to.be.eq(initialSymbol);
+    });
+    
+    it("test decimals", async () => {
+      expect(await erc20.decimals()).to.be.eq(initialDecimals);
+    });
+
     it("test totalsupply", async () => {
       await erc20.connect(admin).mint(Alice.address, 500);
       await erc20.connect(admin).mint(Bob.address, 500);
-      expect(await erc20.totalSupply()).to.be.eq(2000);
+      expect(await erc20.totalSupply()).to.be.eq(1000 * 10**initialDecimals + 1000);
     });
+
     it("test balanceof", async () => {
-      expect(await erc20.balanceOf(admin.address)).to.be.eq(1000);
+      expect(await erc20.balanceOf(admin.address)).to.be.eq(1000 * 10**initialDecimals);
       await erc20.connect(admin).mint(Alice.address, 500);
       expect(await erc20.balanceOf(Alice.address)).to.be.eq(500);
       expect(await erc20.balanceOf(Dd.address)).to.be.eq(0);
     });
+
     it("test allowance", async () => {
       expect(await erc20.allowance(Alice.address, Dd.address)).to.be.eq(0);
       await erc20.connect(Alice).approve(Dd.address, 123);
