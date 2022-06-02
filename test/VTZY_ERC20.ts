@@ -40,6 +40,12 @@ describe("Testing VTZY ERC20 Contract", () => {
     expect(symbol).to.be.eq("VTZY");
   });
 
+  it("should have decimals of 18 by default", async () => {
+    
+    let decimals = await VTZYContract.decimals();
+    expect(decimals).to.be.eq(18);
+  })
+
   it("should have an initial supply of 1 ether by owner", async () => {
 
     let curSupply = await VTZYContract.totalSupply();
