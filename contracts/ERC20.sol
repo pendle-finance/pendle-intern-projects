@@ -1,22 +1,40 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.11;
+pragma solidity ^0.8.0;
 
-import "./IERC20.sol";
+import "./IERC20Metadata.sol";
 
-contract ERC20 is IERC20 {
+contract ERC20 is IERC20Metadata {
 
   address public _owner;
   uint public _totalSupply;
+  string public _name;
+  string public _symbol;
+  uint8 public _decimals;
   
   mapping (address => uint) public balances;
   mapping (address => mapping(address => uint)) public _allowance;
 
-  constructor(uint256 initialSupply) {
+  constructor(uint256 initialSupply, string memory initialName, string memory initialSymbol, uint8 initialDecimals) {
     _owner = msg.sender;
-    mint(_owner, initialSupply); 
+    _name = initialName;
+    _symbol = initialSymbol;
+    _decimals = initialDecimals;
+    mint(_owner, initialSupply  * 10**_decimals); 
   }
 
   // VIEW-ONLY FUNCTIONS
+
+  function name() external view returns (string memory){
+    return _name;
+  }
+
+  function symbol() external view returns (string memory){
+    return _symbol;
+  }
+
+  function decimals() external view returns (uint8){
+    return _decimals;
+  }
 
   function totalSupply() external view returns(uint256) {
     return _totalSupply;
