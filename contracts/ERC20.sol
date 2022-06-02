@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
+import "./IERC20Metadata.sol";
 
 contract ERC20 is IERC20 {
 
@@ -10,8 +11,9 @@ contract ERC20 is IERC20 {
                         State Variables:
     //////////////////////////////////////////////////////////////*/
     uint256 private totalSupply_;
-    uint256 public maxSupplyMintPerWallet = 1 ether;
-    uint256 public maxSupply = 100 ether; 
+    uint8 private decimals_ = 18;
+    uint256 public maxSupplyMintPerWallet = 10**decimals_;
+    uint256 public maxSupply = 100*(10**decimals_); 
     
     string private name_;
     string private symbol_;
@@ -180,6 +182,10 @@ contract ERC20 is IERC20 {
     
     function symbol() external view returns (string memory) {
       return symbol_;
+    }
+
+    function decimals() external view returns (uint8) {
+      return decimals_;
     }
 
    function totalSupply() external view returns (uint256) {
