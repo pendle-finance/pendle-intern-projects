@@ -134,7 +134,8 @@ contract ERC20 is IERC20 {
   }
 
   function _transfer(address from, address to, uint256 amount) internal virtual {
-
+    require(from != address(0), "VTZY: Cannot transfer from zero address");
+    require(to != address(0), "VTZY: Cannot transfer to zero address");
     uint256 userBalance = balances[from];
     require(userBalance >= amount, "VTZY: Insufficient existing funds.");
 
