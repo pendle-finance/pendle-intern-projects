@@ -47,17 +47,16 @@ describe("Test ERC20", () => {
   });
 
   describe("owner-only functions", () => {
-    it("test mint", async () => {
-      //owner mint
+    it("test mint: owner mint", async () => {
       await erc20.connect(admin).mint(Dd.address, 69420);
       expect(await erc20.balanceOf(Dd.address)).to.be.eq(69420);
+    });
 
-      await revertSnapshot();
-
-      //not owner mint
+    it("test mint: not owner mint", async () => {
       expect(erc20.connect(Dd).burn(Dd.address, 177013)).to.be.revertedWith("not owner :(");
     });
-    it("test burn", async () => {
+
+    it("test burn: owner burn", async () => {
       await erc20.connect(admin).mint(Alice.address, 500);
 
       //owner burn
@@ -66,107 +65,96 @@ describe("Test ERC20", () => {
 
       //owner burn too much
       expect(erc20.connect(admin).burn(Alice.address, 2)).to.be.revertedWith("he got nothing left :(");
+    });
 
-      await revertSnapshot();
-
-      //not owner burn
+    it("test burn: not owner burn", async () => {
       expect(erc20.connect(Dd).burn(Dd.address, 100)).to.be.revertedWith("not owner :(");
     });
   });
 
   describe("idk-what-to-classify functions", () => {
-    it("test transfer", async () => {
-      //ordinary transfer
+    it("test transfer: ordinary transfer", async () => {
       await erc20.connect(admin).mint(Alice.address, 500)
       await erc20.connect(Alice).transfer(Bob.address, 6);
       expect(await erc20.balanceOf(Alice.address)).to.be.eq(494);
       expect(await erc20.balanceOf(Bob.address)).to.be.eq(6);
+    });
 
-      await revertSnapshot();
-
-      //transfer to self
+    it("test transfer: transfer to self", async () => {
       await erc20.connect(admin).mint(Alice.address, 1234);
       await erc20.connect(Alice).transfer(Alice.address, 999);
       expect(await erc20.balanceOf(Alice.address)).to.be.eq(1234);
+    });
 
-      await revertSnapshot();
-
-      //too poor to transfer
+    it("test transfer: too poor to transfer", async () => {
       await erc20.connect(admin).mint(Alice.address, 1234);
       expect(erc20.connect(Alice).transfer(Dd.address, 1235)).to.be.revertedWith("too poor :(");
+    });
       
-      await revertSnapshot();
-
-      //too much to transfer (test by lomk)
+    it("test transfer: too much to transfer (test by lomk)", async () => {
       let INF = BigNumber.from(2).pow(255);
       await erc20.connect(admin).mint(Dd.address, 100000)
       expect(await erc20.connect(Dd).transfer(Alice.address, 99000))
         .to.emit(erc20, 'Transfer')
         .withArgs(admin.address, Alice.address, 99000);
       expect(erc20.connect(Dd).transfer(Alice.address, INF)).to.be.revertedWith("too poor :(");
-      
-      await revertSnapshot();
+    });
 
-      //check emit
+    it("test transfer: check emit", async () => {
       await erc20.connect(admin).mint(Alice.address, 1234);
       expect(await erc20.connect(Alice).transfer(Bob.address, 1001))
         .to.emit(erc20, "Transfer")
         .withArgs(Alice.address, Bob.address, 1001);
     });
 
-    it("test approve", async () => {
-      //ordinary approval
+    it("test approve: ordinary approval", async () => {
       await erc20.connect(Alice).approve(Bob.address, 69);
       expect(await erc20.allowance(Alice.address, Bob.address)).to.be.eq(69);
       await erc20.connect(Alice).approve(Bob.address, 71);
       expect(await erc20.allowance(Alice.address, Bob.address)).to.be.eq(71);
+    });
 
-      //allow self
+    it("test approve: allow self", async () => {
       await erc20.connect(Dd).approve(Dd.address, 999999);
       expect(await erc20.allowance(Dd.address, Dd.address)).to.be.eq(999999);
+    });
 
-      //check emit
+    it("test approve: check emit", async () => {
       expect(await erc20.connect(Alice).approve(Bob.address, 1))
         .to.emit(erc20, "Approval")
         .withArgs(Alice.address, Bob.address, 1);
     });
 
-    it("test transferfrom", async () => {
-
-      //ordinary transferfrom
+    it("test transferfrom: ordinary transferfrom", async () => {
       await erc20.connect(admin).mint(Alice.address, 1000)
       await erc20.connect(Alice).approve(Bob.address, 567);
       await erc20.connect(Bob).transferFrom(Alice.address, Dd.address, 566);
       expect(await erc20.balanceOf(Alice.address)).to.be.eq(434);
       expect(await erc20.balanceOf(Dd.address)).to.be.eq(566);
       expect(await erc20.allowance(Alice.address, Bob.address)).to.be.eq(1);
+    });
 
-      await revertSnapshot();
-
-      //self transferfrom
+    it("test transferfrom: self transferfrom", async () => {
       await erc20.connect(admin).mint(Dd.address, 12345)
       await erc20.connect(Dd).approve(Dd.address, 6789);
       await erc20.connect(Dd).transferFrom(Dd.address, Dd.address, 6543);
       expect(await erc20.balanceOf(Dd.address)).to.be.eq(12345);
       expect(await erc20.allowance(Dd.address, Dd.address)).to.be.eq(246);
+    });
 
-      await revertSnapshot();
-
-      //transfer more than balance
+    it("test transferfrom: transfer more than balance", async () => {
       await erc20.connect(admin).mint(Alice.address, 25)
       await erc20.connect(Alice).approve(Bob.address, 50);
       expect(erc20.connect(Bob).transferFrom(Alice.address, Dd.address, 50)).to.be.revertedWith("sender too poor :(");
+    });
 
-      await revertSnapshot();
-
-      //transfer more than allowance
+    it("test transferfrom: transfer more than allowance", async () => {
       await erc20.connect(admin).mint(Alice.address, 50)
       await erc20.connect(Alice).approve(Bob.address, 25);
       expect(erc20.connect(Bob).transferFrom(Alice.address, Dd.address, 50)).to.be.revertedWith("allowance too low :(");
+    });
 
-      await revertSnapshot();
-
-      //check emit
+    it("test transferfrom: check emit", async () => {
       await erc20.connect(admin).mint(Alice.address, 34567)
       await erc20.connect(Alice).approve(Bob.address, 23456);
       expect(erc20.connect(Bob).transferFrom(Alice.address, Dd.address, 12345))
