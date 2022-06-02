@@ -2,15 +2,41 @@
 pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
+import "./IERC20Metadata.sol";
 
-contract ERC20 is IERC20 {
+contract ERC20 is IERC20, IERC20Metadata {
   uint256 public _totalSupply;
+  string public _name;
+  string public _symbol;
+  uint8 public _decimals;
   mapping(address => uint256) public ownership;
   mapping(address => mapping(address => uint256)) public allowances;
 
-  constructor(uint256 initialSupply) {
+  constructor(
+    uint256 initialSupply,
+    string memory inputName,
+    string memory inputSymbol,
+    uint8 inputDecimals
+  ) {
     _totalSupply = initialSupply;
     ownership[msg.sender] = initialSupply;
+    _name = inputName;
+    _symbol = inputSymbol;
+    _decimals = inputDecimals;
+  }
+
+  //view functions
+
+  function name() external view returns (string memory) {
+    return _name;
+  }
+
+  function symbol() external view returns (string memory) {
+    return _symbol;
+  }
+
+  function decimals() external view returns (uint8) {
+    return _decimals;
   }
 
   function totalSupply() external view returns (uint256) {
@@ -24,6 +50,8 @@ contract ERC20 is IERC20 {
   function allowance(address owner, address spender) external view returns (uint256) {
     return allowances[owner][spender];
   }
+
+  //utility functions
 
   function transfer(address to, uint256 amount) external returns (bool) {
     require(ownership[msg.sender] >= amount, "Insufficient funds");
@@ -46,12 +74,13 @@ contract ERC20 is IERC20 {
     address to,
     uint256 amount
   ) external returns (bool) {
-    require(allowances[from][to] >= amount, "Receiver not approved");
+    require(allowances[from][msg.sender] >= amount, "Receiver not approved");
     require(ownership[from] >= amount, "Insufficient balance");
     require(to != address(0), "Cannot transfer to 0 address");
     require(from != address(0), "Cannot transfer from 0 address");
     ownership[from] -= amount;
     ownership[to] += amount;
+    allowances[from][msg.sender] -= amount;
     emit Transfer(from, to, amount);
     return true;
   }
