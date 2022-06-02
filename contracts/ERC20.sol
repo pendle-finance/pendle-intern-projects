@@ -1,24 +1,44 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.11;
 
-import "./IERC20.sol";
+import "./IERC20Metadata.sol";
 
-contract ERC20 is IERC20 {
+contract ERC20 is IERC20Metadata {
 
-  uint private total;
+  string private _name;
+  string private _symbol;
+  uint8 private _decimals;
+  uint private _totalSupply;
   address public contractOwner;
   mapping(address=>uint) private balance;
   mapping(address=>mapping(address=>uint)) private allowanceAmount;  // allowanceAmount[owner][spender] = amount possible
 
-  constructor (uint initialTotal) 
+  constructor (string memory name, string memory symbol, uint8 decimals, uint totalSupply) 
   {
-    total = initialTotal;  
+    _name = name;
+    _symbol = symbol;
+    _decimals = decimals;
+    _totalSupply = totalSupply;  
     contractOwner = msg.sender;  
-    balance[contractOwner] = initialTotal;
+    balance[contractOwner] = totalSupply;
+  }
+
+  function name() external view returns (string memory)
+  {
+    return _name;
+  }
+
+  function symbol() external view returns (string memory)
+  {
+    return _symbol;
+  }
+
+  function decimals() external view returns (uint8){
+    return _decimals;
   }
 
   function totalSupply() external view returns (uint256) {
-    return total;
+    return _totalSupply;
   }
 
   function balanceOf(address account) external view returns (uint256) {
@@ -37,10 +57,13 @@ contract ERC20 is IERC20 {
   }
 
   function allowance(address owner, address spender) external view returns (uint256) {    
+    require(owner!=address(0), "invalid owner");
+    require(spender!=address(0), "invalid spender");
     return allowanceAmount[owner][spender];
   }
 
   function approve(address spender, uint256 amount) external returns (bool) {
+    require(spender!=address(0), "invalid spender");
     allowanceAmount[msg.sender][spender] = amount;
 
     emit Approval(msg.sender, spender, amount);
@@ -69,5 +92,10 @@ contract ERC20 is IERC20 {
     emit Transfer(from, to, amount);
 
     return true;
+  }
+
+  fallback () external payable 
+  {
+    revert("No money here");
   }
 }

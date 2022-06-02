@@ -13,12 +13,15 @@ describe("TestERC20", () => {
   let snapshotId;
   let erc20: ERC20;
 
-  const initialTotal = 1000;
+  const name = "VTD";
+  const symbol = "VTDsymbol";
+  const decimals = 12;
+  const totalSupply = 1000;
 
   before(async () => {
     globalSnapshotId = await evm_snapshot();
 
-    erc20 = await deploy<ERC20>("ERC20", [initialTotal]);
+    erc20 = await deploy<ERC20>("ERC20", [name, symbol, decimals, totalSupply]);
 
     snapshotId = await evm_snapshot();
   });
@@ -32,18 +35,13 @@ describe("TestERC20", () => {
     await revertSnapshot();
   });
 
-  it("get total successfully", async () => {
-
-    let curTotal = await erc20.totalSupply();
-    expect(curTotal).to.be.eq(initialTotal);
-  });
-
   it("test constructor successfully", async () => {
-    let owner = await erc20.contractOwner();
-    expect(owner).to.be.eq(admin.address);
-
-    let ownerBalance = await erc20.balanceOf(admin.address);
-    expect(ownerBalance).to.be.eq(initialTotal);
+    expect(await erc20.contractOwner()).to.be.eq(admin.address);
+    expect(await erc20.balanceOf(admin.address)).to.be.eq(totalSupply);
+    expect(await erc20.totalSupply()).to.be.eq(totalSupply);
+    expect(await erc20.name()).to.be.eq(name);
+    expect(await erc20.symbol()).to.be.eq(symbol);
+    expect(await erc20.decimals()).to.be.eq(decimals);
   });
 
   it("transfer successfully", async () => {
@@ -55,13 +53,13 @@ describe("TestERC20", () => {
     expect(adminToAliceTransfer).to.emit(erc20, 'Transfer').withArgs(admin.address, Alice.address, smallAmount);
     expect(AliceToBobTransfer).to.emit(erc20, 'Transfer').withArgs(Alice.address, Bob.address, smallerAmount);
 
-    expect(await erc20.balanceOf(admin.address)).to.be.eq(initialTotal - smallAmount);
+    expect(await erc20.balanceOf(admin.address)).to.be.eq(totalSupply - smallAmount);
     expect(await erc20.balanceOf(Alice.address)).to.be.eq(smallAmount - smallerAmount);
     expect(await erc20.balanceOf(Bob.address)).to.be.eq(smallerAmount);
   });
 
   it("transfer failed as expected", async () => {
-    let amount = initialTotal + 1;  // admin trys to transfer to Alice
+    let amount = totalSupply + 1;  // admin trys to transfer to Alice
 
     await expect(erc20.transfer(Alice.address, amount)).to.be.revertedWith("Not enough balance to transfer");
 
@@ -70,7 +68,12 @@ describe("TestERC20", () => {
 
   it("approve successfully", async () => {
     let approveAmount = 20;
-    await erc20.approve(Alice.address, approveAmount);
+    await expect(erc20.approve(constants.AddressZero, approveAmount)).to.be.revertedWith("invalid spender");
+    let approvalToAlice = await erc20.approve(Alice.address, approveAmount);
+    expect(approvalToAlice).to.emit(erc20, 'Approval').withArgs(admin.address, Alice.address, approveAmount);
+
+    await expect(erc20.allowance(admin.address, constants.AddressZero)).to.be.revertedWith("invalid spender");
+    await expect(erc20.allowance(constants.AddressZero, Alice.address)).to.be.revertedWith("invalid owner");
 
     expect(await erc20.allowance(admin.address, Alice.address)).to.be.eq(approveAmount);
   });
@@ -82,7 +85,7 @@ describe("TestERC20", () => {
     let transferFromAdminToBob =  await erc20.connect(Alice).transferFrom(admin.address, Bob.address, approveAmount);
     expect(transferFromAdminToBob).to.emit(erc20, 'Transfer').withArgs(admin.address, Bob.address, approveAmount);
 
-    expect(await erc20.balanceOf(admin.address)).to.be.eq(initialTotal - approveAmount);
+    expect(await erc20.balanceOf(admin.address)).to.be.eq(totalSupply - approveAmount);
     expect(await erc20.balanceOf(Bob.address)).to.be.eq(approveAmount);
     expect(await erc20.allowance(admin.address, Alice.address)).to.be.eq(0);
   });
