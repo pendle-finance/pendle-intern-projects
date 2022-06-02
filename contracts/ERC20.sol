@@ -1,12 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./IERC20.sol";
+import "./IERC20Metadata.sol";
 
-contract ERC20 is IERC20 {
-  uint256 internal _totalSupply = 0;
+contract ERC20 is IERC20Metadata {
+  string internal _name;
+  string internal _symbol;
+  uint8 internal _decimals;
+  uint256 internal _totalSupply;
   mapping(address => uint256) internal _balanceOf;
   mapping(address => mapping(address => uint256)) internal _allowance;
+
+  constructor(
+    string memory newName, 
+    string memory newSymbol) {
+    _name = newName;
+    _symbol = newSymbol;
+    _decimals = 18;
+  }
 
   function totalSupply() external view returns (uint256) {
     return _totalSupply;
@@ -17,13 +28,10 @@ contract ERC20 is IERC20 {
   }
 
   function transfer(address to, uint256 amount) external returns (bool) {
-    if (to == address(0)) return false;
+    require(to != address(0), "Address to must be non-zero");
 
     address from = msg.sender;
-
-    if (_balanceOf[from] < amount) {
-      return false;
-    }
+    require(_balanceOf[from] >= amount, "Amount must not exceed balance");
     
     _balanceOf[from] -= amount;
     _balanceOf[to] += amount;
@@ -36,7 +44,7 @@ contract ERC20 is IERC20 {
   }
 
   function approve(address spender, uint256 amount) external returns (bool) {
-    if (spender == address(0)) return false;
+    require(spender != address(0), "Address spender must be non-zero");
 
     address owner = msg.sender;
     _allowance[owner][spender] = amount;
@@ -50,13 +58,10 @@ contract ERC20 is IERC20 {
     uint256 amount
   ) external returns (bool) {
     address sender = msg.sender;
-    if (
-      from == address(0) ||
-      to == address(0) ||
-      _allowance[from][sender] < amount ||
-      _balanceOf[from] < amount) {
-      return false;
-    }
+    require(from != address(0), "Address from must be non-zero");
+    require(to != address(0), "Address to must be non-zero");
+    require(_allowance[from][sender] >= amount, "Amount must not exceed allowance");
+    require(_balanceOf[from] >= amount, "Amount must not exceed balance");
 
     _allowance[from][sender] -= amount;
     _balanceOf[from] -= amount;
@@ -65,11 +70,30 @@ contract ERC20 is IERC20 {
     return true;
   }
 
-  // For testing purposes only
   function mint(address to, uint256 amount) external {
-    require(to != address(0), "Address must be non-zero");
+    require(to != address(0), "Address to must be non-zero");
 
     _totalSupply += amount;
     _balanceOf[to] += amount;
+  }
+
+  function burn(address from, uint256 amount) external {
+    require(from != address(0), "Address from must be non-zero");
+    require(_balanceOf[from] >= amount, "Amount must not exceed balance");
+
+    _totalSupply -= amount;
+    _balanceOf[from] -= amount;
+  }
+
+  function name() external view returns (string memory) {
+    return _name;
+  }
+
+  function symbol() external view returns (string memory) {
+    return _symbol;
+  }
+
+  function decimals() external view returns (uint8) {
+    return _decimals;
   }
 }
