@@ -46,13 +46,7 @@ contract ERC20 is IERC20Metadata {
   }
 
   function transfer(address to, uint256 amount) external returns (bool) {
-    require(balance[msg.sender] >= amount, "Not enough balance to transfer");
-    require(to!=address(0), "invalid receiver");
-
-    balance[msg.sender] -= amount;
-    balance[to] += amount;
-
-    emit Transfer(msg.sender, to, amount);
+    _transfer(msg.sender, to, amount);
     return true;
   }
 
@@ -75,23 +69,24 @@ contract ERC20 is IERC20Metadata {
     address to,
     uint256 amount
   ) external returns (bool) {
+    
+    require(allowanceAmount[from][msg.sender] >= amount, "exceed the amount allowed");
+    _transfer(from, to, amount);
+    allowanceAmount[from][msg.sender] -= amount;   
+
+    return true;
+  }
+
+  function _transfer(address from, address to, uint amount) internal 
+  {
     require(from!=address(0), "invalid sender");
     require(to!=address(0), "invalid receiver");
     require(balance[from] >= amount, "not enough money from the owner");
-    require(allowanceAmount[from][msg.sender] >= amount, "exceed the amount allowed");
 
-    // if (allowanceAmount[from][msg.sender] != 2**256-1)  // The allowanceAmount is not infinity
-    // {
-    //   allowanceAmount[from][msg.sender] -= amount; 
-    // }
-    
-    allowanceAmount[from][msg.sender] -= amount; 
     balance[from] -= amount;
     balance[to] += amount;  // Hope no overflow here! Should depend on the designer
 
     emit Transfer(from, to, amount);
-
-    return true;
   }
 
   fallback () external payable 

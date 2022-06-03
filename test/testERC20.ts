@@ -13,9 +13,9 @@ describe("TestERC20", () => {
   let snapshotId;
   let erc20: ERC20;
 
-  const name = "VTD";
-  const symbol = "VTDsymbol";
-  const decimals = 12;
+  const name = "VuongTungDuong";
+  const symbol = "VTD";
+  const decimals = 18;
   const totalSupply = 1000;
 
   before(async () => {
@@ -61,7 +61,7 @@ describe("TestERC20", () => {
   it("transfer failed as expected", async () => {
     let amount = totalSupply + 1;  // admin trys to transfer to Alice
 
-    await expect(erc20.transfer(Alice.address, amount)).to.be.revertedWith("Not enough balance to transfer");
+    await expect(erc20.transfer(Alice.address, amount)).to.be.revertedWith("not enough money from the owner");
 
     await expect(erc20.transfer(constants.AddressZero, 0)).to.be.revertedWith("invalid receiver");
   });  
