@@ -64,3 +64,5 @@ reference
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+contracts/VTZYERC20.sol

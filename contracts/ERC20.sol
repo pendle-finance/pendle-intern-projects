@@ -11,8 +11,8 @@ contract ERC20 is IERC20Metadata, Ownable {
   string private _symbol;
   uint8 private _decimals;
 
-  mapping(address => uint256) balances;
-  mapping(address => mapping(address => uint256)) allowances;
+  mapping(address => uint256) private balances;
+  mapping(address => mapping(address => uint256)) private allowances;
 
   constructor(
     string memory tokenName,
