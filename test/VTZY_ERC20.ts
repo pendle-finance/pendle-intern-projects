@@ -16,7 +16,7 @@ describe("Testing VTZY ERC20 Contract", () => {
     globalSnapshotId = await evm_snapshot();
 
     // Deploy contract:
-    VTZYContract = await deploy<ERC20>("ERC20", ["Vtzy Token", "VTZY"]);
+    VTZYContract = await deploy<ERC20>("ERC20", ["Vtzy Token", "VTZY"], true);
 
     snapshotId = await evm_snapshot();
   });
