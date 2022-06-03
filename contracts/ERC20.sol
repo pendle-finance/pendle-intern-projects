@@ -5,14 +5,14 @@ import "./IERC20Metadata.sol";
 
 contract ERC20 is IERC20Metadata {
 
-  address public _owner;
-  uint public _totalSupply;
-  string public _name;
-  string public _symbol;
-  uint8 public _decimals;
+  address internal _owner;
+  uint internal _totalSupply;
+  string internal _name;
+  string internal _symbol;
+  uint8 internal _decimals;
   
-  mapping (address => uint) public balances;
-  mapping (address => mapping(address => uint)) public _allowance;
+  mapping (address => uint) internal balances;
+  mapping (address => mapping(address => uint)) internal _allowance;
 
   constructor(uint256 initialSupply, string memory initialName, string memory initialSymbol, uint8 initialDecimals) {
     _owner = msg.sender;
