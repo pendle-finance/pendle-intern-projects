@@ -4,7 +4,6 @@ pragma solidity ^0.8.11;
 import "./IERC20Metadata.sol";
 
 contract ERC20 is IERC20Metadata {
-
   string private _name;
   string private _symbol;
   uint8 private _decimals;
