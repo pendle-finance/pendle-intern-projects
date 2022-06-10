@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { Contract, utils, constants } from "ethers";
 import { ethers, waffle } from "hardhat";
 import { deploy, evm_revert, evm_snapshot } from "./helpers/hardhat-helpers";
-import { ERC20, TestContract } from "../typechain";
+import { ERC20 } from "../typechain";
 
 describe("TestERC20", () => {
   const [admin, Alice, Bob] = waffle.provider.getWallets();

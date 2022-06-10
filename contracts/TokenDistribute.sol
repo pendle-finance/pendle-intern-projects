@@ -3,93 +3,38 @@ pragma solidity ^0.8.11;
 
 import "./IERC20Metadata.sol";
 
-
-contract TokenDistribute is IERC20 {
-    string private constant _name = "VuongTungDuongv2";
-    string private constant _symbol = "VTD-V2";
-    uint8 private constant _decimals = 18;
-    uint private _totalSupply = 1e10;
+contract TokenDistribute {
     address public contractOwner;
-    mapping(address=>uint) private balance;
-    mapping(address=>uint) private nativeBalance;
-    mapping(address=>mapping(address=>uint)) private allowanceAmount;  // allowanceAmount[owner][spender] = amount possible
-    
-    // event Distribute(address to, uint256 value);
+    mapping(address=>mapping(address=>uint)) private _tokenBalance;  // _tokenBalance[tokenAddress][owner]
+    mapping(address=>uint) private _nativeBalance;
+    mapping(address=>uint) private _distributedToken;
 
     constructor ()
     {
         contractOwner = msg.sender;  
-        balance[contractOwner] = _totalSupply;
-    }
-
-    function name() external pure returns (string memory)
-    {
-        return _name;
-    }
-
-    function symbol() external pure returns (string memory)
-    {
-        return _symbol;
-    }
-
-    function decimals() external pure returns (uint8){
-        return _decimals;
-    }
-
-    function totalSupply() external view returns (uint256) {
-        return _totalSupply;
-    }
-
-    function balanceOf(address account) external view returns (uint256) {
-        return balance[account];
-    }
-
-    function transfer(address to, uint256 amount) external returns (bool) {
-        _transfer(msg.sender, to, amount);
-        return true;
-    }
-
-    function allowance(address owner, address spender) external view returns (uint256) {    
-        require(owner!=address(0), "invalid owner");
-        require(spender!=address(0), "invalid spender");
-        return allowanceAmount[owner][spender];
-    }
-
-    function approve(address spender, uint256 amount) external returns (bool) {
-        require(spender!=address(0), "invalid spender");
-        allowanceAmount[msg.sender][spender] = amount;
-
-        emit Approval(msg.sender, spender, amount);
-        return true;
-    }
-
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) external returns (bool) {
-        
-        require(allowanceAmount[from][msg.sender] >= amount, "exceed the amount allowed");
-        _transfer(from, to, amount);
-        allowanceAmount[from][msg.sender] -= amount;   
-
-        return true;
-    }
-
-    function _transfer(address from, address to, uint amount) internal 
-    {
-        require(from!=address(0), "invalid sender");
-        require(to!=address(0), "invalid receiver");
-        require(balance[from] >= amount, "not enough money from the owner");
-
-        balance[from] -= amount;
-        balance[to] += amount;  // Hope no overflow here! Should depend on the designer
-
-        emit Transfer(from, to, amount);
     }
 
     function nativeBalanceOf(address account) external view returns (uint256) {
-        return nativeBalance[account];
+        return _nativeBalance[account];
+    }
+
+    function tokenBalanceOf(address tokenAddress, address owner) external view returns (uint256) {
+        return _tokenBalance[tokenAddress][owner];
+    }
+
+    function distributedToken(address tokenAddress) external view returns (uint256) {
+        return _distributedToken[tokenAddress];
+    }
+
+    function transferToken(address tokenAddress, address to, uint amount) public
+    {
+        require(msg.sender==contractOwner, "only owner can distribute");
+        require(to!=address(0), "invalid receiver");
+
+        require(IERC20Metadata(tokenAddress).balanceOf(address(this)) >= _distributedToken[tokenAddress] + amount, "not enough token to transfer");
+
+        _distributedToken[tokenAddress] += amount;
+        _tokenBalance[tokenAddress][to] += amount;
     }
 
     function transferNative(address to) public payable
@@ -98,17 +43,25 @@ contract TokenDistribute is IERC20 {
         require(to!=address(0), "invalid receiver");
         require(msg.value>0, "transfer amount = 0");
 
-        nativeBalance[to] += msg.value;
+        _nativeBalance[to] += msg.value;
     }
 
-    function withdraw(address payable to) external
+    function withdrawNative() external
     {        
-        require(to!=address(0), "invalid receiver");
-        require(nativeBalance[to]>0, "no balance to withdraw");
+        require(_nativeBalance[msg.sender]>0, "no balance to withdraw");
         
-        uint amount = nativeBalance[to];
-        nativeBalance[to] = 0;
-        to.transfer(amount);
+        uint amount = _nativeBalance[msg.sender];
+        _nativeBalance[msg.sender] = 0;
+        payable(msg.sender).transfer(amount);
+    }
+
+    function withdrawToken(address tokenAddress) external
+    {                
+        uint amount = _tokenBalance[tokenAddress][msg.sender];
+        require(amount>0, "no balance to withdraw");
+        _tokenBalance[tokenAddress][msg.sender] = 0;
+        _distributedToken[tokenAddress] -= amount;
+        IERC20Metadata(tokenAddress).transfer(msg.sender, amount);
     }
 
     receive() external payable 
