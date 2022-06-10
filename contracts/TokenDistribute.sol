@@ -9,6 +9,13 @@ contract TokenDistribute {
     mapping(address=>uint) private _nativeBalance;
     mapping(address=>uint) private _distributedToken;
 
+    modifier onlyOwner() {
+      if (msg.sender != contractOwner) {
+        revert("not the owner of the contract");
+      }    
+      _;
+    }
+
     constructor ()
     {
         contractOwner = msg.sender;  
@@ -26,9 +33,9 @@ contract TokenDistribute {
         return _distributedToken[tokenAddress];
     }
 
-    function transferToken(address tokenAddress, address to, uint amount) public
+    function transferToken(address tokenAddress, address to, uint amount) onlyOwner public
     {
-        require(msg.sender==contractOwner, "only owner can distribute");
+        // require(msg.sender==contractOwner, "only owner can distribute");
         require(to!=address(0), "invalid receiver");
 
         require(IERC20Metadata(tokenAddress).balanceOf(address(this)) >= _distributedToken[tokenAddress] + amount, "not enough token to transfer");
@@ -37,9 +44,9 @@ contract TokenDistribute {
         _tokenBalance[tokenAddress][to] += amount;
     }
 
-    function transferNative(address to) public payable
+    function transferNative(address to) onlyOwner public payable
     {
-        require(msg.sender==contractOwner, "only owner can distribute");
+        // require(msg.sender==contractOwner, "only owner can distribute");
         require(to!=address(0), "invalid receiver");
         require(msg.value>0, "transfer amount = 0");
 
@@ -66,5 +73,6 @@ contract TokenDistribute {
 
     receive() external payable 
     {
+        revert("Call transferNative() instead");
     }    
 }
