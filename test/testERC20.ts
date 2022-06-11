@@ -6,7 +6,7 @@ import { deploy, evm_revert, evm_snapshot } from "./helpers/hardhat-helpers";
 import { ERC20 } from "../typechain";
 import { arch } from "os";
 
-describe("ERC20 test", () => {
+xdescribe("ERC20 test", () => {
   const [admin, alice, bob, charlie] = waffle.provider.getWallets();
   let globalSnapshotId;
   let snapshotId;
