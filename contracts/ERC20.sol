@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./IERC20Metadata.sol";
+import "../interfaces/IERC20Metadata.sol";
 
 contract ERC20 is IERC20Metadata {
   string internal _name;

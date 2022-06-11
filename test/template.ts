@@ -29,16 +29,16 @@ export async function deploy<CType extends Contract>(deployer: SignerWithAddress
 }
 
 async function main() {
-  const [deployer] = await hre.ethers.getSigners();
+  // const [deployer] = await hre.ethers.getSigners();
 
   // let contract = await deploy<ERC20>(deployer, "ERC20", ["Automated Bit Currency", "ABC"], true);
-  let contract = await getContractAt("ERC20", "0x8aAe7a68B5D690d0564b1896E925fA6E57395F34");
-  await contract.transfer("0xD9c9935f4BFaC33F38fd3A35265a237836b30Bd1", BigNumber.from(10).pow(15));
+  // let contract = await getContractAt("ERC20", "0x8aAe7a68B5D690d0564b1896E925fA6E57395F34");
+  // await contract.transfer("0xD9c9935f4BFaC33F38fd3A35265a237836b30Bd1", BigNumber.from(10).pow(15));
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+// main()
+  // .then(() => process.exit(0))
+  // .catch((error) => {
+    // console.error(error);
+    // process.exit(1);
+  // });
