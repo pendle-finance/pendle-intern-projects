@@ -132,16 +132,26 @@ describe("Test Airdrop",()=>{
 
   beforeEach(async () => {
     await revertSnapshot();
+    //Set up balance
     await firstnewERC20.transfer(newAirdrop.address,100000);
     await secondnewERC20.transfer(newAirdrop.address,100000);
+    await admin.sendTransaction({
+      to: newAirdrop.address,
+      value: BigNumber.from(10).pow(22),
+    })
   });
 
   // TODO: allow success
   it("Test Allow", async ()=>{
-    // Allow success
+    // Allow erc20 success
     await newAirdrop.alowERC20(Bob.address,firstnewERC20.address,1000);
     let BobFirstAllow = await newAirdrop.balanceOf(Bob.address,firstnewERC20.address);
     expect(BobFirstAllow).to.be.equal(1000);
+    
+    // Allow eth success
+    await newAirdrop.allowETH(Bob.address,1000);
+    let BobETHAllow = await newAirdrop.balanceETH(Bob.address)
+    expect(BobETHAllow).to.be.equal(1000);
   })
 
   // TODO: allow claim success, not sucess
@@ -164,9 +174,43 @@ describe("Test Airdrop",()=>{
 
     let BobFirstBalance = await firstnewERC20.connect(Bob).balanceOf(Bob.address);
     expect(BobFirstBalance).to.be.equal(1000);
-    
+
     let BobSecondBalance = await secondnewERC20.connect(Bob).balanceOf(Bob.address);
     expect(BobSecondBalance).to.be.equal(1000);
+    //Fail
+    await expect(newAirdrop.connect(Bob).claim([firstnewERC20.address,secondnewERC20.address],[1000,1000],false,0)).to.be.revertedWith("Insufficient balance");
+  })
+
+  it("Test claim eth", async ()=>{
+    //success
+    let original = await waffle.provider.getBalance(Bob.address);
+    await newAirdrop.allowETH(Bob.address,BigNumber.from(10).pow(21));
+    await newAirdrop.connect(Bob).claim([],[],true,BigNumber.from(10).pow(21));
+    let after = await waffle.provider.getBalance(Bob.address);
+    
+    expect(Number(after)).to.be.greaterThan(
+      Number(original)
+    );
+  })
+
+  it("Test claim mix", async ()=>{
+    //success
+    let original = await waffle.provider.getBalance(Bob.address);
+    await newAirdrop.alowERC20(Bob.address,firstnewERC20.address,1000);
+    await newAirdrop.alowERC20(Bob.address,secondnewERC20.address,2000);
+    await newAirdrop.allowETH(Bob.address,BigNumber.from(10).pow(21));
+    await newAirdrop.connect(Bob).claim([firstnewERC20.address,secondnewERC20.address],[1000,1000],true,BigNumber.from(10).pow(21));
+
+    let BobFirstBalance = await firstnewERC20.connect(Bob).balanceOf(Bob.address);
+    expect(BobFirstBalance).to.be.equal(1000);
+
+    let BobSecondBalance = await secondnewERC20.connect(Bob).balanceOf(Bob.address);
+    expect(BobSecondBalance).to.be.equal(1000);
+    let after = await waffle.provider.getBalance(Bob.address);
+
+    expect(Number(after)).to.be.greaterThan(
+      Number(original)
+    );
     //Fail
     await expect(newAirdrop.connect(Bob).claim([firstnewERC20.address,secondnewERC20.address],[1000,1000],false,0)).to.be.revertedWith("Insufficient balance");
   })

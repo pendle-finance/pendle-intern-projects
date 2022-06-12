@@ -74,11 +74,17 @@ contract Airdrop is Ownable {
         require(ethBalances[receipt]>=amount,"Insufficient balance");
 
         ethBalances[receipt]-=amount;
-        
+
         receipt.transfer(amount);
 
         emit TransferETH(msg.sender,amount);
 
         return true;
     }
+
+    //fallback receive
+    receive() external payable {
+        
+    }
+
 }
