@@ -3,7 +3,7 @@ pragma solidity ^0.8.11;
 
 import "./IERC20Metadata.sol";
 
-contract ERC20 is  IERC20Metadata{
+contract ERC20 is IERC20Metadata{
 
   uint private totalBalance;
   //address public owner;
