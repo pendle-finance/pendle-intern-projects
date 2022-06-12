@@ -16,6 +16,8 @@ contract Airdrop is Ownable {
 
     mapping(address => uint) private ethBalances;
 
+
+    // All main function
     function allowETH(address receipt,uint amount) public onlyOwner{
         ethBalances[receipt]+=amount;
         emit SettingETH(receipt , amount);
@@ -31,10 +33,32 @@ contract Airdrop is Ownable {
         emit Setting(receipt,erc20token.name(),amount);
     }
 
+    function claim(address[] memory tokens,uint[] memory amounts, bool eth,uint ethAmount) public {
+        for(uint i=0;i<tokens.length;i++) {
+            require(_erc20transfer(msg.sender, tokens[i], amounts[i]),"Transfer token fail");
+        }
+        if(eth){
+            require(_ethtransfer(payable(msg.sender), ethAmount),"Transfer eth fail");
+        }
+    }
+
+    // Debug function
+    function balanceOf(address receipt,address token) external view returns(uint) {
+        return balances[receipt][token];
+    }
+
+    function balanceETH(address receipt) external view returns(uint) {
+        return ethBalances[receipt];
+    }
+
+
+    //Internal helper function
     function _erc20transfer(address receipt, address token,uint amount) internal returns (bool){
         require(receipt!=address(0), "Invalid zero receipt");
         require(token!=address(0), "Invalid zero token address");
         require(balances[msg.sender][token]>=amount,"Insufficient balance");
+
+        balances[msg.sender][token]-=amount;
 
         IERC20Metadata erc20token = IERC20Metadata(token);
 
@@ -49,20 +73,12 @@ contract Airdrop is Ownable {
         require(receipt!=address(0), "Invalid zero receipt");
         require(ethBalances[receipt]>=amount,"Insufficient balance");
 
+        ethBalances[receipt]-=amount;
+        
         receipt.transfer(amount);
 
         emit TransferETH(msg.sender,amount);
 
         return true;
     }
-
-    function claim(address[] memory tokens,uint[] memory amounts, bool eth,uint ethAmount) public {
-        for(uint i=0;i<tokens.length;i++) {
-            require(_erc20transfer(msg.sender, tokens[i], amounts[i]),"Transfer token fail");
-        }
-        if(eth){
-            require(_ethtransfer(payable(msg.sender), ethAmount),"Transfer eth fail");
-        }
-    }
-
 }

@@ -132,20 +132,42 @@ describe("Test Airdrop",()=>{
 
   beforeEach(async () => {
     await revertSnapshot();
+    await firstnewERC20.transfer(newAirdrop.address,100000);
+    await secondnewERC20.transfer(newAirdrop.address,100000);
   });
 
-  // TODO: allow success, revert with address 0, revert with token address 0
+  // TODO: allow success
   it("Test Allow", async ()=>{
-
+    // Allow success
+    await newAirdrop.alowERC20(Bob.address,firstnewERC20.address,1000);
+    let BobFirstAllow = await newAirdrop.balanceOf(Bob.address,firstnewERC20.address);
+    expect(BobFirstAllow).to.be.equal(1000);
   })
 
   // TODO: allow claim success, not sucess
   it("Test claim one", async ()=>{
-
+    //success
+    await newAirdrop.alowERC20(Bob.address,firstnewERC20.address,1000);
+    await newAirdrop.connect(Bob).claim([firstnewERC20.address],[1000],false,0);
+    let BobFirstBalance = await firstnewERC20.connect(Bob).balanceOf(Bob.address);
+    expect(BobFirstBalance).to.be.equal(1000);
+    //Fail
+    await expect(newAirdrop.connect(Bob).claim([firstnewERC20.address],[1000],false,0)).to.be.revertedWith("Insufficient balance");
   })
 
   // TODO: allow claim success, not sucess
   it("Test claim many", async ()=>{
+    //success
+    await newAirdrop.alowERC20(Bob.address,firstnewERC20.address,1000);
+    await newAirdrop.alowERC20(Bob.address,secondnewERC20.address,2000);
+    await newAirdrop.connect(Bob).claim([firstnewERC20.address,secondnewERC20.address],[1000,1000],false,0);
 
+    let BobFirstBalance = await firstnewERC20.connect(Bob).balanceOf(Bob.address);
+    expect(BobFirstBalance).to.be.equal(1000);
+    
+    let BobSecondBalance = await secondnewERC20.connect(Bob).balanceOf(Bob.address);
+    expect(BobSecondBalance).to.be.equal(1000);
+    //Fail
+    await expect(newAirdrop.connect(Bob).claim([firstnewERC20.address,secondnewERC20.address],[1000,1000],false,0)).to.be.revertedWith("Insufficient balance");
   })
 });
