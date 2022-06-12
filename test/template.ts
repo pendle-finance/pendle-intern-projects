@@ -29,16 +29,16 @@ export async function deploy<CType extends Contract>(deployer: SignerWithAddress
 }
 
 async function main() {
-  const [deployer] = await hre.ethers.getSigners();
+//   const [deployer] = await hre.ethers.getSigners();
 
-  let contract = await getContractAt<ERC20>("ERC20", "0xE34E28C6CE3f8f3a7aF86eF2bb182840dbd723e5");
-  console.log(await contract.totalSupply());
-  console.log(await contract.balanceOf(deployer.address));
+//   let contract = await getContractAt<ERC20>("ERC20", "0xE34E28C6CE3f8f3a7aF86eF2bb182840dbd723e5");
+//   console.log(await contract.totalSupply());
+//   console.log(await contract.balanceOf(deployer.address));
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+// main()
+//   .then(() => process.exit(0))
+//   .catch((error) => {
+//     console.error(error);
+//     process.exit(1);
+//   });
