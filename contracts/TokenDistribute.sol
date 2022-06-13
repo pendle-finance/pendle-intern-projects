@@ -33,7 +33,7 @@ contract TokenDistribute {
         return _distributedToken[tokenAddress];
     }
 
-    function transferToken(address tokenAddress, address to, uint amount) onlyOwner public
+    function transferToken(address tokenAddress, address to, uint amount) public onlyOwner
     {
         // require(msg.sender==contractOwner, "only owner can distribute");
         require(to!=address(0), "invalid receiver");
@@ -44,7 +44,7 @@ contract TokenDistribute {
         _tokenBalance[tokenAddress][to] += amount;
     }
 
-    function transferNative(address to) onlyOwner public payable
+    function transferNative(address to) public onlyOwner payable
     {
         // require(msg.sender==contractOwner, "only owner can distribute");
         require(to!=address(0), "invalid receiver");

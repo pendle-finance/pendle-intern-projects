@@ -1,8 +1,10 @@
 import { expect } from "chai";
-import { Contract, utils, constants } from "ethers";
+import { Contract, utils, constants, BigNumber } from "ethers";
 import { ethers, waffle } from "hardhat";
 import { deploy, evm_revert, evm_snapshot } from "./helpers/hardhat-helpers";
 import { ERC20, TokenDistribute } from "../typechain";
+// import "hardhat/console.sol";
+import hre from 'hardhat';
 
 describe("TestTokenDistribute", () => {
   const [admin, Alice, Bob] = waffle.provider.getWallets();
@@ -78,16 +80,30 @@ describe("TestTokenDistribute", () => {
     
 
   it("Anton transfers ETH to the contract and distribute to interns successfully", async () => {
-    let amount = 20;
+    let amount = 1e10;
 
     await expect(tokenDistribute.connect(Alice).withdrawNative()).to.be.revertedWith("no balance to withdraw");
     await expect(tokenDistribute.transferNative(constants.AddressZero, {value: amount})).to.be.revertedWith("invalid receiver");
     await expect(tokenDistribute.transferNative(Alice.address, {value: 0})).to.be.revertedWith("transfer amount = 0");
-    // await expect(Alice.sendTransaction({to: erc20.address, value: amount})).to.be.revertedWith("Call transferNative() instead");
+    await expect(Alice.sendTransaction({to: tokenDistribute.address, value: amount})).to.be.revertedWith("Call transferNative() instead"); 
 
     await tokenDistribute.transferNative(Alice.address, {value: amount});
     expect(await tokenDistribute.nativeBalanceOf(Alice.address)).to.be.eq(amount);
+    let prevBalance = await hre.ethers.provider.getBalance(Alice.address);
 
     await expect(await tokenDistribute.connect(Alice).withdrawNative()).to.changeEtherBalance(Alice, amount);
+  });
+
+  it("Anton transfers ETH to the contract and distribute to interns successfully, by Long and Lam", async () => {
+    let amount = 1e10;
+    let prevBalance = await hre.ethers.provider.getBalance(Alice.address);
+
+    await tokenDistribute.transferNative(Alice.address, {value: amount});
+
+    const tx = await tokenDistribute.connect(Alice).withdrawNative();
+    const receipt = await tx.wait();
+    const gasSpent = receipt.gasUsed.mul(receipt.effectiveGasPrice);
+
+    expect(await hre.ethers.provider.getBalance(Alice.address)).to.be.eq(prevBalance.add(amount).sub(gasSpent)); // to get balance of the address 
   });
 });
