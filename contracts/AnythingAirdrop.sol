@@ -23,7 +23,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
   }
 
   //Recommended to use WETH instead of ETH
-  function airdropETH(address to, uint256 amount) public payable onlyOwner {
+  function airdropETH(address to, uint256 amount) external payable onlyOwner {
     require(msg.value == amount, "AnythingAirdrop: ETH given is not equal to allocation");
     _airdropETH(to, amount);
   }
@@ -32,7 +32,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     address[] calldata toAddresses,
     address tokenAddress,
     uint256[] calldata dropAmount
-  ) public onlyOwner {
+  ) external onlyOwner {
     uint256 toLength = toAddresses.length;
     require(
       dropAmount.length == toLength,
@@ -47,7 +47,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     address toAddress,
     address[] calldata tokenAddresses,
     uint256[] calldata dropAmount
-  ) public onlyOwner {
+  ) external onlyOwner {
     uint256 tokenAddrLength = tokenAddresses.length;
     require(
       dropAmount.length == tokenAddrLength,
@@ -62,11 +62,11 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     address to,
     address tokenAddress,
     uint256 amount
-  ) public {
+  ) external {
     require(to != address(0), "AnythingAirdrop: claim to 0 address");
     uint256 allocatedAmount;
-    if (tokenAddress == address(0)) allocatedAmount = getETHDistribution(to);
-    else allocatedAmount = getERC20Distribution(to, tokenAddress);
+    if (tokenAddress == address(0)) allocatedAmount = this.getETHDistribution(to);
+    else allocatedAmount = this.getERC20Distribution(to, tokenAddress);
     require(allocatedAmount >= amount, "AnythingAirdrop: claiming more than allocation");
     _claim(to, tokenAddress, amount);
     emit Claim(tokenAddress, to, to, amount);
@@ -76,7 +76,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     address to,
     address[] calldata tokenAddresses,
     uint256[] calldata amount
-  ) public {
+  ) external {
     uint256 tokenAddrLength = tokenAddresses.length;
     require(
       amount.length == tokenAddrLength,
@@ -88,8 +88,8 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     for (uint256 i = 0; i < tokenAddrLength; i++) {
       tokenAddress = tokenAddresses[i];
       claimAmount = amount[i];
-      if (tokenAddress == address(0)) allocatedAmount = getETHDistribution(to);
-      else allocatedAmount = getERC20Distribution(to, tokenAddress);
+      if (tokenAddress == address(0)) allocatedAmount = this.getETHDistribution(to);
+      else allocatedAmount = this.getERC20Distribution(to, tokenAddress);
       require(allocatedAmount >= claimAmount, "AnythingAirdrop: claiming more than allocation");
       _claim(to, tokenAddress, claimAmount);
       emit Claim(tokenAddress, to, to, claimAmount);
@@ -100,16 +100,16 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     address from,
     address tokenAddress,
     uint256 amount
-  ) public onlyOwner {
+  ) external onlyOwner {
     uint256 allocatedAmount;
-    if (tokenAddress == address(0)) allocatedAmount = getETHDistribution(from);
-    else allocatedAmount = getERC20Distribution(from, tokenAddress);
+    if (tokenAddress == address(0)) allocatedAmount = this.getETHDistribution(from);
+    else allocatedAmount = this.getERC20Distribution(from, tokenAddress);
     require(allocatedAmount >= amount, "AnythingAirdrop: takeback more than allocation");
     _claim(msg.sender, tokenAddress, amount);
     emit Claim(tokenAddress, from, msg.sender, amount);
   }
 
-  function shiftAround() public onlyOwner {}
+  function shiftAround() external onlyOwner {}
 
   function _airdrop(
     address to,
@@ -148,14 +148,18 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
   }
 
   function getERC20Distribution(address userAddress, address tokenAddress)
-    public
+    external
     view
     returns (uint256 allocatedAmount)
   {
     return erc20Distribution[userAddress][tokenAddress];
   }
 
-  function getETHDistribution(address userAddress) public view returns (uint256 allocatedAmount) {
+  function getETHDistribution(address userAddress)
+    external
+    view
+    returns (uint256 allocatedAmount)
+  {
     return ethDistribution[userAddress];
   }
 
