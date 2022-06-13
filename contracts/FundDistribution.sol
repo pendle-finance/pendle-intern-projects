@@ -11,6 +11,14 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
   mapping(address => mapping(address => uint256)) public tokenAllowance;
   address[] public tokens;
 
+  uint256 private unlocked = 1;
+  modifier lock() {
+    require(unlocked == 1, "No reentrant calls");
+    unlocked = 0;
+    _;
+    unlocked = 1;
+  }
+
   constructor(address _owner) public {
     owner = _owner;
   }
@@ -71,7 +79,7 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     return true;
   }
 
-  function claimEth() external payable override returns (bool) {
+  function claimEth() external payable override lock returns (bool) {
     require(ethAllowance[msg.sender] > 0, "Allowance is zero");
     require(address(this).balance > 0, "Balance is zero");
     ethAllowance[msg.sender] = 0;
@@ -82,17 +90,24 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     return true;
   }
 
-  function claimToken(address token) external override returns (bool) {
+  function claimToken(address token) external override lock returns (bool) {
     require(tokenAllowance[msg.sender][token] > 0, "Allowance is zero");
     require(IERC20(token).balanceOf(address(this)) > 0, "Balance is zero");
     return _transferToken(msg.sender, token);
   }
 
-  function claimAllTokens() external override returns (bool) {
+  function claimAllTokens() external override lock returns (bool) {
     return _transferAllTokens(msg.sender);
   }
 
-  function sendEthTo(address to) external payable override OnlyNonZeroAddress(to) returns (bool) {
+  function sendEthTo(address to)
+    external
+    payable
+    override
+    OnlyNonZeroAddress(to)
+    lock
+    returns (bool)
+  {
     require(ethAllowance[to] > 0, "Allowance is zero");
     require(address(this).balance > 0, "Balance is zero");
     uint256 amount = _min(address(this).balance, ethAllowance[to]);
@@ -107,6 +122,7 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     override
     OnlyNonZeroAddress(to)
     OnlyNonZeroAddress(token)
+    lock
     returns (bool)
   {
     require(tokenAllowance[to][token] > 0, "Allowance is zero");
@@ -114,11 +130,17 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     return _transferToken(to, token);
   }
 
-  function sendAllTokensTo(address to) external override OnlyNonZeroAddress(to) returns (bool) {
+  function sendAllTokensTo(address to)
+    external
+    override
+    OnlyNonZeroAddress(to)
+    lock
+    returns (bool)
+  {
     return _transferAllTokens(to);
   }
 
-  function claimFund() external payable override returns (bool) {
+  function claimFund() external payable override lock returns (bool) {
     if (ethAllowance[msg.sender] > 0) {
       uint256 amount = _min(address(this).balance, ethAllowance[msg.sender]);
       ethAllowance[msg.sender] -= amount;
@@ -130,7 +152,14 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     return true;
   }
 
-  function sendFundTo(address to) external payable override OnlyNonZeroAddress(to) returns (bool) {
+  function sendFundTo(address to)
+    external
+    payable
+    override
+    OnlyNonZeroAddress(to)
+    lock
+    returns (bool)
+  {
     if (ethAllowance[to] > 0) {
       uint256 amount = _min(address(this).balance, ethAllowance[to]);
       ethAllowance[to] -= amount;

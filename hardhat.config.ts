@@ -77,6 +77,12 @@ const config: HardhatUserConfig = {
       accounts: [`${process.env.PRIVATE_KEYS || dummyPrivateKey}`],
       timeout: 500000,
     },
+    avax: {
+      url: `https://api.avax.network/ext/bc/C/rpc`,
+      accounts: [`${process.env.PRIVATE_KEYS}`],
+      gasPrice: 30 * 1000000000,
+      timeout: 200000,
+    },
   },
   typechain: {
     target: 'ethers-v5',
@@ -87,6 +93,11 @@ const config: HardhatUserConfig = {
   },
   mocha: {
     timeout: 500000,
+  },
+  etherscan: {
+    // Your API key for Etherscan
+    // Obtain one at https://etherscan.io/
+    apiKey: process.env.SNOWTRACE_KEY,
   },
 };
 
