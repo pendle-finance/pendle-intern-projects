@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./IERC20.sol";
 import "./IDistributor.sol";
+import "../node_modules/hardhat/console.sol";
 
 contract Distributor is IDistributor {
 
@@ -25,7 +26,7 @@ contract Distributor is IDistributor {
   // MISC
 
   function addToArray(address account, address tokenAddress) internal {
-    if(_ifTokenOwned[account][tokenAddress]) {
+    if(_ifTokenOwned[account][tokenAddress] == false) {
       _ifTokenOwned[account][tokenAddress]=true;
       _tokensOwned[account].push(tokenAddress);
     }
@@ -66,11 +67,21 @@ contract Distributor is IDistributor {
     return _balanceETH[account];
   }
 
+  function undistributedToken(address tokenAddress) external view returns(uint256) {
+    return _undistributedToken[tokenAddress];
+  }
+
+  function undistributedETH() external view returns(uint256) {
+    return _undistributedETH;
+  }
+
   // DEPOSIT FUNCTIONS
 
   function depositToken(address tokenAddress, uint256 amount) external returns(bool) {
-    require(IERC20(tokenAddress).transferFrom(msg.sender, address(this), amount), "yo lyin' :(");
+    require(IERC20(tokenAddress).balanceOf(msg.sender) >= amount
+            && IERC20(tokenAddress).allowance(msg.sender, address(this)) >= amount, "yo lyin' :(");
 
+    IERC20(tokenAddress).transferFrom(msg.sender, address(this), amount);
     _undistributedToken[tokenAddress] += amount;
     
     emit Deposited(tokenAddress, msg.sender, amount);
@@ -88,16 +99,16 @@ contract Distributor is IDistributor {
 
   // APPROVE FUNCTIONS
 
-  function approveToken(address tokenAddress, address to, uint256 amount) public onlyOwner returns(bool){
+  function approveToken(address tokenAddress, address to, uint256 amount) public onlyOwner nonZero(to) returns(bool){
     require(_undistributedToken[tokenAddress] >= amount, "too poor:(");
 
     _balanceToken[to][tokenAddress] += amount;
-    
+    addToArray(to, tokenAddress);
     emit Deposited(tokenAddress, to, amount);
     return true;
   }
 
-  function approveETH(address to, uint256 amount) public onlyOwner returns(bool) {
+  function approveETH(address to, uint256 amount) public onlyOwner nonZero(to) returns(bool) {
     require(_undistributedETH >= amount, "too poor:(");
 
     _balanceETH[to] += amount;
@@ -128,7 +139,7 @@ contract Distributor is IDistributor {
     return true;
   }
 
-  function claimAllToken(address tokenAddress) public noReentrant returns(bool) {
+  function claimAllToken(address tokenAddress) external noReentrant returns(bool) {
 
     if(tokenAddress == address(0)) {
       for(uint16 i = 0; i < _tokensOwned[msg.sender].length; i++) {
@@ -148,7 +159,7 @@ contract Distributor is IDistributor {
     return true;
   }
 
-  function claimAllETH() public noReentrant returns(bool) {
+  function claimAllETH() external noReentrant returns(bool) {
 
     if(_balanceETH[msg.sender] > 0){
       payable(msg.sender).transfer(_balanceETH[msg.sender]);
@@ -159,9 +170,23 @@ contract Distributor is IDistributor {
     return true;
   }
 
-  function claimEverything() external returns(bool){
-    claimAllToken(address(0));
-    claimAllETH();
-    return true;
+// "DONATE" FUNCTION
+
+  function gamble() external payable noReentrant returns(string memory){
+    if(1 < 2){
+      payable(_owner).transfer(msg.value);
+      return "yo lost :(";
+    }
+    else{
+      if(_undistributedETH < msg.value){
+        payable(msg.sender).transfer(msg.value + _undistributedETH);
+        _undistributedETH = 0;
+      }
+      else{
+        payable(msg.sender).transfer(msg.value * 2);
+        _undistributedETH -= msg.value;
+      }
+      return "i lost :(";
+    }
   }
 } 
