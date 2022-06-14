@@ -6,8 +6,10 @@ import "./interfaces/IFundDistribution.sol";
 import "./helpers/BoringOwnable.sol";
 
 contract FundDistribution is IFundDistribution, BoringOwnable {
+  //should not use the word allowance since allowancd is only used for ERC20
   mapping(address => uint256) public ethAllowance;
   mapping(address => bool) public curTokens;
+
   mapping(address => mapping(address => uint256)) public tokenAllowance;
   address[] public tokens;
 
@@ -22,7 +24,9 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
 
   receive() external payable override {}
 
+  //token can't not be called by anyone
   function addToken(address token) external override OnlyNonZeroAddress(token) returns (bool) {
+    require(!curTokens[token], "Token already added");
     tokens.push(token);
     curTokens[token] = true;
     require(IERC20(token).balanceOf(address(this)) > 0, "Amount is zero");
@@ -30,6 +34,8 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     return true;
   }
 
+  //should specify amount to add
+  //should only be called by the owner of the token
   function receiveToken(address token, address sender)
     external
     override
@@ -71,10 +77,13 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     return true;
   }
 
+  //should have an alarm when insufficient funds, return uint
   function claimEth() external payable override returns (bool) {
+    //dont need to check if the balance is enough
     require(ethAllowance[msg.sender] > 0, "Allowance is zero");
     require(address(this).balance > 0, "Balance is zero");
     ethAllowance[msg.sender] = 0;
+    //alarm or revert if insufficient funds
     uint256 amount = _min(address(this).balance, ethAllowance[msg.sender]);
     ethAllowance[msg.sender] -= amount;
     payable(msg.sender).transfer(amount);
@@ -88,10 +97,12 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     return _transferToken(msg.sender, token);
   }
 
+  //expect to claim everything inluding eth
   function claimAllTokens() external override returns (bool) {
     return _transferAllTokens(msg.sender);
   }
 
+  //should not have duplicated code
   function sendEthTo(address to) external payable override OnlyNonZeroAddress(to) returns (bool) {
     require(ethAllowance[to] > 0, "Allowance is zero");
     require(address(this).balance > 0, "Balance is zero");
@@ -150,6 +161,7 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     return true;
   }
 
+  //the return value should be process, else revert when smt wrong
   function _transferToken(address to, address token) internal returns (bool) {
     IERC20 tokenContract = IERC20(token);
     uint256 amount = _min(tokenAllowance[to][token], tokenContract.balanceOf(address(this)));
