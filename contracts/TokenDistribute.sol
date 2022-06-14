@@ -33,6 +33,7 @@ contract TokenDistribute {
         return _distributedToken[tokenAddress];
     }
 
+    // Anton transfers Token to the contract first, then call this function to transfer Token to interns
     function transferToken(address tokenAddress, address to, uint amount) public onlyOwner
     {
         // require(msg.sender==contractOwner, "only owner can distribute");
@@ -44,6 +45,7 @@ contract TokenDistribute {
         _tokenBalance[tokenAddress][to] += amount;
     }
 
+    // Anton transfers ETH directly to interns by calling this function with the amount of ETH
     function transferNative(address to) public onlyOwner payable
     {
         // require(msg.sender==contractOwner, "only owner can distribute");
