@@ -20,6 +20,13 @@ contract TokenDistribute {
       _;
     }
 
+    modifier nonZeroAddress(address address_) {
+        if (address_ == address(0)) {
+            revert("invalid receiver");
+        }
+        _;
+    }
+
     constructor ()
     {
         contractOwner = msg.sender;  
@@ -48,10 +55,8 @@ contract TokenDistribute {
     }
 
     // Distribute 
-    function distributeErc20(address tokenAddress, address to, uint amount) public onlyOwner
+    function distributeErc20(address tokenAddress, address to, uint amount) public onlyOwner nonZeroAddress(to)
     {
-        require(to!=address(0), "invalid receiver");
-
         require(IERC20Metadata(tokenAddress).balanceOf(address(this)) >= _distributedErc20[tokenAddress] + amount, "not enough token to distribute");
 
         _distributedErc20[tokenAddress] += amount;
@@ -59,38 +64,37 @@ contract TokenDistribute {
     }
 
     // Anton transfers ETH directly to interns by calling this function with the amount of ETH
-    function transferNative(address to) public onlyOwner payable
+    function transferNative(address to) public onlyOwner nonZeroAddress(to) payable
     {
-        // require(msg.sender==contractOwner, "only owner can distribute");
-        require(to!=address(0), "invalid receiver");
         require(msg.value>0, "transfer amount = 0");
 
         _nativeBalance[to] += msg.value;
     }
 
-    function withdrawNative() external
+    function withdrawNative(address to) nonZeroAddress(to) public
     {        
-        require(_nativeBalance[msg.sender]>0, "no balance to withdraw");
+        require(_nativeBalance[to]>0, "no balance to withdraw");
         
-        uint amount = _nativeBalance[msg.sender];
-        _nativeBalance[msg.sender] = 0;
-        payable(msg.sender).transfer(amount);
+        uint amount = _nativeBalance[to];
+        _nativeBalance[to] = 0;
+        payable(to).transfer(amount);
     }
 
-    function withdrawErc20(address tokenAddress) external
+    function withdrawErc20(address tokenAddress, address to) external nonZeroAddress(to) 
     {                
-        _transferErc20(tokenAddress, msg.sender);
+        _transferErc20(tokenAddress, to);
     }
 
-    function withdrawAllErc20() external
+    function withdrawAll(address to) external nonZeroAddress(to) 
     {
         for (uint i=0; i<erc20Tokens.length; i++) 
         {
-            _transferErc20(erc20Tokens[i], msg.sender);
+            _transferErc20(erc20Tokens[i], to);
         } 
+        if (_nativeBalance[to]>0) withdrawNative(to);  // As suggested, this function should withdraw ETH as well
     }
 
-    function _transferErc20(address tokenAddress, address to) private 
+    function _transferErc20(address tokenAddress, address to) private nonZeroAddress(to)  
     {
         require(to!=address(0), "invalid receiver");
         uint amount = _erc20Balance[tokenAddress][to];
