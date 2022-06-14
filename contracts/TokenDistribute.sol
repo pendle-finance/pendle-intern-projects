@@ -2,12 +2,16 @@
 pragma solidity ^0.8.11;
 
 import "./IERC20Metadata.sol";
+import "./ERC20.sol";
 
 contract TokenDistribute {
     address public contractOwner;
-    mapping(address=>mapping(address=>uint)) private _tokenBalance;  // _tokenBalance[tokenAddress][owner]
+    mapping(address=>mapping(address=>uint)) private _erc20Balance;  // _erc20Balance[tokenAddress][owner]
     mapping(address=>uint) private _nativeBalance;
-    mapping(address=>uint) private _distributedToken;
+    mapping(address=>uint) private _distributedErc20;  // Amount of erc20Token distributed in this contract but haven't withdrew by the interns
+    mapping(address=>bool) private _registered;  
+
+    address [] public erc20Tokens;
 
     modifier onlyOwner() {
       if (msg.sender != contractOwner) {
@@ -25,24 +29,33 @@ contract TokenDistribute {
         return _nativeBalance[account];
     }
 
-    function tokenBalanceOf(address tokenAddress, address owner) external view returns (uint256) {
-        return _tokenBalance[tokenAddress][owner];
+    function erc20BalanceOf(address tokenAddress, address owner) external view returns (uint256) {
+        return _erc20Balance[tokenAddress][owner];
     }
 
-    function distributedToken(address tokenAddress) external view returns (uint256) {
-        return _distributedToken[tokenAddress];
+    function distributedErc20(address tokenAddress) external view returns (uint256) {
+        return _distributedErc20[tokenAddress];
     }
 
-    // Anton transfers Token to the contract first, then call this function to transfer Token to interns
-    function transferToken(address tokenAddress, address to, uint amount) public onlyOwner
+    // Anton approves Token to the contract first, then call this function to deposit Token to the contract
+    function depositErc20(address tokenAddress, uint amount) public onlyOwner
     {
-        // require(msg.sender==contractOwner, "only owner can distribute");
+        ERC20(tokenAddress).transferFrom(msg.sender, address(this), amount);
+        if (!_registered[tokenAddress])
+        {
+            erc20Tokens.push(tokenAddress);
+        }
+    }
+
+    // Distribute 
+    function distributeErc20(address tokenAddress, address to, uint amount) public onlyOwner
+    {
         require(to!=address(0), "invalid receiver");
 
-        require(IERC20Metadata(tokenAddress).balanceOf(address(this)) >= _distributedToken[tokenAddress] + amount, "not enough token to transfer");
+        require(IERC20Metadata(tokenAddress).balanceOf(address(this)) >= _distributedErc20[tokenAddress] + amount, "not enough token to distribute");
 
-        _distributedToken[tokenAddress] += amount;
-        _tokenBalance[tokenAddress][to] += amount;
+        _distributedErc20[tokenAddress] += amount;
+        _erc20Balance[tokenAddress][to] += amount;
     }
 
     // Anton transfers ETH directly to interns by calling this function with the amount of ETH
@@ -64,13 +77,27 @@ contract TokenDistribute {
         payable(msg.sender).transfer(amount);
     }
 
-    function withdrawToken(address tokenAddress) external
+    function withdrawErc20(address tokenAddress) external
     {                
-        uint amount = _tokenBalance[tokenAddress][msg.sender];
+        _transferErc20(tokenAddress, msg.sender);
+    }
+
+    function withdrawAllErc20() external
+    {
+        for (uint i=0; i<erc20Tokens.length; i++) 
+        {
+            _transferErc20(erc20Tokens[i], msg.sender);
+        } 
+    }
+
+    function _transferErc20(address tokenAddress, address to) private 
+    {
+        require(to!=address(0), "invalid receiver");
+        uint amount = _erc20Balance[tokenAddress][to];
         require(amount>0, "no balance to withdraw");
-        _tokenBalance[tokenAddress][msg.sender] = 0;
-        _distributedToken[tokenAddress] -= amount;
-        IERC20Metadata(tokenAddress).transfer(msg.sender, amount);
+        _erc20Balance[tokenAddress][to] = 0;
+        _distributedErc20[tokenAddress] -= amount;
+        IERC20Metadata(tokenAddress).transfer(to, amount);
     }
 
     receive() external payable 

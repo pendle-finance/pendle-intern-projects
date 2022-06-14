@@ -10,7 +10,7 @@ contract ERC20 is IERC20Metadata {
   uint private _totalSupply;
   address public contractOwner;
   mapping(address=>uint) private balance;
-  mapping(address=>mapping(address=>uint)) private allowanceAmount;  // allowanceAmount[owner][spender] = amount possible
+  mapping(address=>mapping(address=>uint)) private _allowance;  // _allowance[owner][spender] = amount possible
 
   constructor (string memory name, string memory symbol, uint8 decimals, uint totalSupply) 
   {
@@ -52,12 +52,12 @@ contract ERC20 is IERC20Metadata {
   function allowance(address owner, address spender) external view returns (uint256) {    
     require(owner!=address(0), "invalid owner");
     require(spender!=address(0), "invalid spender");
-    return allowanceAmount[owner][spender];
+    return _allowance[owner][spender];
   }
 
   function approve(address spender, uint256 amount) external returns (bool) {
     require(spender!=address(0), "invalid spender");
-    allowanceAmount[msg.sender][spender] = amount;
+    _allowance[msg.sender][spender] = amount;
 
     emit Approval(msg.sender, spender, amount);
     return true;
@@ -69,9 +69,9 @@ contract ERC20 is IERC20Metadata {
     uint256 amount
   ) external returns (bool) {
     
-    require(allowanceAmount[from][msg.sender] >= amount, "exceed the amount allowed");
+    require(_allowance[from][msg.sender] >= amount, "exceed the amount allowed");
     _transfer(from, to, amount);
-    allowanceAmount[from][msg.sender] -= amount;   
+    _allowance[from][msg.sender] -= amount;   
 
     return true;
   }
@@ -86,10 +86,5 @@ contract ERC20 is IERC20Metadata {
     balance[to] += amount;  // Hope no overflow here! Should depend on the designer
 
     emit Transfer(from, to, amount);
-  }
-
-  fallback () external payable 
-  {
-    revert("No money here");
   }
 }
