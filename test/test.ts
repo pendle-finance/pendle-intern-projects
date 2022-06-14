@@ -57,9 +57,9 @@ describe('FundDistribution', () => {
     it('addToken revert if amount is zero', async () => {
       await expect(FundDistribution.addToken(TokenA.address)).to.be.revertedWith('Amount is zero');
     });
-    it('addToken revert if not owner', async () => {
+    it('addToken revert if not funder', async () => {
       await expect(FundDistribution.connect(addr2).addToken(TokenA.address)).to.be.revertedWith(
-        'Ownable: caller is not the owner'
+        'Only funders can call this function'
       );
     });
     it('One token can only be added once', async () => {
@@ -105,13 +105,13 @@ describe('FundDistribution', () => {
         'Token is not added'
       );
     });
-    it('should revert if not owner', async () => {
+    it('should revert if not distributor', async () => {
       await expect(
         FundDistribution.connect(addr1).setTokenApprove(addr1.address, TokenA.address, 50)
-      ).to.be.revertedWith('Ownable: caller is not the owner');
+      ).to.be.revertedWith('Only distributors can call this function');
       await expect(
         FundDistribution.connect(addr1).setEthApprove(addr1.address, ethers.utils.parseEther('50'))
-      ).to.be.revertedWith('Ownable: caller is not the owner');
+      ).to.be.revertedWith('Only distributors can call this function');
     });
   });
   describe('claimFunds', () => {
@@ -195,9 +195,23 @@ describe('FundDistribution', () => {
       expect(await FundDistribution.tokenAvailable(addr2.address, TokenA.address)).to.equal(50);
       expect(await FundDistribution.tokenAvailable(addr2.address, TokenB.address)).to.equal(40);
     });
+    it('claim fund revert if insufficient balance', async () => {
+      await FundDistribution.setEthApprove(addr2.address, ethers.utils.parseEther('2'));
+      await FundDistribution.setTokenApprove(addr2.address, TokenA.address, 100);
+      await FundDistribution.setTokenApprove(addr2.address, TokenB.address, 100);
+      await expect(FundDistribution.connect(addr2).claimAllFundsWithRevertIfInsufficientFunds()).to.be.revertedWith(
+        'Not enough balance'
+      );
+    });
     it('claim Ether', async () => {
       await FundDistribution.setEthApprove(addr2.address, 50);
       expect(await FundDistribution.sendEthTo(addr2.address)).to.changeEtherBalance(addr2, 50);
+    });
+    it('claim Ether revert if insufficient balance', async () => {
+      await FundDistribution.setEthApprove(addr2.address, ethers.utils.parseEther('2'));
+      await expect(FundDistribution.connect(addr2).claimEthWithRevertIfInsufficientFunds()).to.be.revertedWith(
+        'Not enough balance'
+      );
     });
     it('claim Ether to self', async () => {
       await FundDistribution.setEthApprove(addr2.address, 50);
@@ -208,6 +222,12 @@ describe('FundDistribution', () => {
       await FundDistribution.setTokenApprove(addr2.address, TokenB.address, 60);
       await FundDistribution.sendTokenTo(addr2.address, TokenA.address);
       expect(await TokenA.balanceOf(addr2.address)).to.equal(50);
+    });
+    it('claim token revert if insufficient balance', async () => {
+      await FundDistribution.setTokenApprove(addr2.address, TokenA.address, 100);
+      await expect(
+        FundDistribution.connect(addr2).claimTokenWithRevertIfInsufficientFunds(TokenA.address)
+      ).to.be.revertedWith('Not enough tokens');
     });
   });
   describe('test emit events', () => {

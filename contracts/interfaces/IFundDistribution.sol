@@ -24,13 +24,13 @@ interface IFundDistribution {
     uint256 amount
   ) external;
 
-  function claimEth() external payable;
+  function claimEth() external;
 
   function claimToken(address token) external;
 
   function claimAllFunds() external;
 
-  function sendEthTo(address to) external payable;
+  function sendEthTo(address to) external;
 
   function sendTokenTo(address to, address token) external;
 
