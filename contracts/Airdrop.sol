@@ -16,17 +16,21 @@ contract Airdrop is Ownable {
 
     mapping(address => uint) private ethBalances;
 
+    // modifier
+    modifier onlyNonzeroAddress(address check) {
+        require(check != address(0), "Invalid zero address");
+        _;
+    }
 
     // All main function
-    function allowETH(address receipt,uint amount) public onlyOwner{
+    function allowETH(address receipt,uint amount) public onlyOwner onlyNonzeroAddress(receipt){
         ethBalances[receipt]+=amount;
         emit SettingETH(receipt , amount);
     }
 
-    function alowERC20(address receipt,address token,uint amount) public onlyOwner {
-        require(receipt!=address(0), "Invalid zero receipt");
-        require(token!=address(0), "Invalid zero token address");
-
+    function alowERC20(address receipt,address token,uint amount) public 
+                                                                  onlyOwner onlyNonzeroAddress(receipt)onlyNonzeroAddress(token) 
+    {
         IERC20Metadata erc20token = IERC20Metadata(token);
         balances[receipt][token]+=amount;
 
@@ -53,32 +57,34 @@ contract Airdrop is Ownable {
 
 
     //Internal helper function
-    function _erc20transfer(address receipt, address token,uint amount) internal returns (bool){
-        require(receipt!=address(0), "Invalid zero receipt");
-        require(token!=address(0), "Invalid zero token address");
+    function _erc20transfer(address receipt, address token,uint amount) internal 
+                                                                        onlyNonzeroAddress(receipt) onlyNonzeroAddress(token) 
+                                                                        returns (bool)
+    {
         require(balances[msg.sender][token]>=amount,"Insufficient balance");
-
-        balances[msg.sender][token]-=amount;
-
         IERC20Metadata erc20token = IERC20Metadata(token);
-
-        erc20token.transfer(receipt, amount);
-
+        // do nothing with 0 amount
+        if(amount > 0) {
+            balances[msg.sender][token]-=amount;
+            erc20token.transfer(receipt, amount);        
+        }
         emit Transfer(receipt, erc20token.name(), amount);
 
         return true;
     }
 
-    function _ethtransfer(address payable receipt, uint amount) internal returns (bool){
-        require(receipt!=address(0), "Invalid zero receipt");
+    function _ethtransfer(address payable receipt, uint amount) internal 
+                                                                onlyNonzeroAddress(receipt) returns (bool)
+    {
         require(ethBalances[receipt]>=amount,"Insufficient balance");
+        // Do nothing with zero amount
+        if(amount > 0) {
+            ethBalances[receipt]-=amount;
 
-        ethBalances[receipt]-=amount;
+            receipt.transfer(amount);
 
-        receipt.transfer(amount);
-
-        emit TransferETH(msg.sender,amount);
-
+            emit TransferETH(msg.sender,amount);
+        }
         return true;
     }
 
