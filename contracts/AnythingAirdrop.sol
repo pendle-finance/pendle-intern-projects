@@ -8,6 +8,9 @@ import "./BoringOwnable.sol";
 contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
   //Please refer to IAnythingAirdrop for events emitted
 
+  //Instead of depositing money into the smart contract and then call functions to allocate the money to people accordingly, AnythingAirdrop will ask for a transfer from the user according to the allocation given
+  //Idk if this is better but it is what I thought of initially
+
   //mapping of recepientAddress => tokenAddress => claimAmount
   mapping(address => mapping(address => uint256)) private erc20Distribution;
   mapping(address => uint256) private ethDistribution;
@@ -25,12 +28,15 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     uint256 amount
   ) external onlyOwner {
     _deposit(to, tokenAddress, amount);
+    TransferHelper.safeTransferFrom(tokenAddress, msg.sender, address(this), amount);
   }
 
   //Recommended to use WETH instead of ETH
   function airdropETH(address to, uint256 amount) external payable onlyOwner {
-    require(msg.value == amount, "AnythingAirdrop: ETH given is not equal to allocation");
+    require(msg.value >= amount, "AnythingAirdrop: ETH given is not equal to allocation");
     _depositETH(to, amount);
+    uint256 remainder = msg.value - amount;
+    if (remainder > 0) payable(address(this)).transfer(remainder);
     //require msg.value >= amount and refund ETH dust instead??
   }
 
@@ -44,9 +50,12 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
       dropAmount.length == toLength,
       "AnythingAirdrop: Invalid input parameters given (Length does not match)"
     );
+    uint256 total;
     for (uint256 i = 0; i < toLength; i++) {
+      total += dropAmount[i];
       _deposit(toAddresses[i], tokenAddress, dropAmount[i]);
     }
+    TransferHelper.safeTransferFrom(tokenAddress, msg.sender, address(this), total);
   }
 
   //Pls check this
@@ -67,7 +76,9 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
       totalETH += rewards;
       _depositETH(toAddresses[i], rewards);
     }
-    require(msg.value == totalETH, "AnythingAirdrop: ETH given is not equal to allocation");
+    require(msg.value >= totalETH, "AnythingAirdrop: ETH given is not equal to allocation");
+    uint256 remainder = msg.value - totalETH;
+    if (remainder > 0) payable(address(this)).transfer(remainder);
     //require msg.value >= totalETH and refund ETH dust instead??
   }
 
@@ -83,6 +94,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     );
     for (uint256 i = 0; i < tokenAddrLength; i++) {
       _deposit(toAddress, tokenAddresses[i], dropAmount[i]);
+      TransferHelper.safeTransferFrom(tokenAddresses[i], msg.sender, address(this), dropAmount[i]);
     }
   }
 
@@ -161,8 +173,8 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
   ) internal checkZeroAddress(to) checkZeroAddress(tokenAddress){
     //Should we trust that the TransferFrom function of the token smart contract will handle transfer to 0 address (hence no need to check to is 0 address) or do we have to enforce this?
     //when tokenAddress is 0, it refers to ETH, so it would good if there's no tokenAddress with 0 address
+    //Why there's no safeTransferFrom in _deposit: so that batchdeposit is possible in airdropMultiUserOneToken (saving gas due to less external calls?)
     erc20Distribution[to][tokenAddress] += amount;
-    TransferHelper.safeTransferFrom(tokenAddress, msg.sender, to, amount);
     emit Airdrop(to, tokenAddress, amount);
   }
 
