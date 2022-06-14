@@ -10,11 +10,9 @@ interface IFundDistribution {
   event TokenIsClaimed(address to, address token, uint256 amount);
   event AllTokensAreClaimed(address to);
 
-  receive() external payable;
-
   function addToken(address token) external returns (bool);
 
-  function receiveToken(address token, address sender) external returns (bool);
+  function receiveToken(address token, uint256 amount) external returns (bool);
 
   function setEthAllowance(address to, uint256 amount) external returns (bool);
 
