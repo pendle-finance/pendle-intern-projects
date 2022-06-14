@@ -6,10 +6,13 @@ import "./interfaces/IFundDistribution.sol";
 import "./helpers/BoringOwnable.sol";
 
 contract FundDistribution is IFundDistribution, BoringOwnable {
+  //address -> amount of ether
   mapping(address => uint256) public ethAvailable;
-
+  //token address -> added or not
   mapping(address => bool) public curTokens;
+  //address -> token address -> amount of token
   mapping(address => mapping(address => uint256)) public tokenAvailable;
+  //all the current tokens in the contract
   address[] public tokens;
 
   constructor(address _owner) public {
@@ -23,151 +26,112 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
 
   receive() external payable {}
 
-  function addToken(address token)
-    external
-    override
-    onlyOwner
-    OnlyNonZeroAddress(token)
-    returns (bool)
-  {
+  function addToken(address token) external override onlyOwner OnlyNonZeroAddress(token) {
     require(!curTokens[token], "Token already added");
     tokens.push(token);
     curTokens[token] = true;
     require(IERC20(token).balanceOf(address(this)) > 0, "Amount is zero");
     emit TokenIsAdded(token);
-    return true;
   }
 
   function receiveToken(address token, uint256 amount)
     external
     override
     OnlyNonZeroAddress(token)
-    returns (bool)
   {
     if (!curTokens[token]) {
       tokens.push(token);
       curTokens[token] = true;
     }
     IERC20 tokenContract = IERC20(token);
-    bool res = tokenContract.transferFrom(msg.sender, address(this), amount);
+    require(amount > 0, "Amount is zero");
+    tokenContract.transferFrom(msg.sender, address(this), amount);
     emit TokenIsAdded(token);
-    return res;
   }
 
-  function setEthAllowance(address to, uint256 amount)
+  function setEthApprove(address to, uint256 amount)
     external
     override
     onlyOwner
     OnlyNonZeroAddress(to)
-    returns (bool)
   {
     ethAvailable[to] = amount;
-    emit EthAllowanceIsSet(to, amount);
-    return true;
+    emit EthApproveIsSet(to, amount);
   }
 
-  function setTokenAllowance(
+  function setTokenApprove(
     address to,
     address token,
     uint256 amount
-  ) external override onlyOwner OnlyNonZeroAddress(to) returns (bool) {
+  ) external override onlyOwner OnlyNonZeroAddress(to) {
     require(curTokens[token], "Token is not added");
     tokenAvailable[to][token] = amount;
-    emit TokenAllowanceIsSet(to, token, amount);
-    return true;
+    emit TokenApproveIsSet(to, token, amount);
   }
 
-  function claimEth() external payable override returns (bool) {
-    require(ethAvailable[msg.sender] > 0, "Allowance is zero");
-    require(address(this).balance > 0, "Balance is zero");
-    ethAvailable[msg.sender] = 0;
-    uint256 amount = _min(address(this).balance, ethAvailable[msg.sender]);
-    ethAvailable[msg.sender] -= amount;
-    payable(msg.sender).transfer(amount);
-    emit EthIsClaimed(msg.sender, amount);
-    return true;
+  function claimEth() public payable override {
+    sendEthTo(msg.sender);
   }
 
-  function claimToken(address token) external override returns (bool) {
-    require(tokenAvailable[msg.sender][token] > 0, "Allowance is zero");
-    require(IERC20(token).balanceOf(address(this)) > 0, "Balance is zero");
-    return _transferToken(msg.sender, token);
+  function claimToken(address token) external override {
+    sendTokenTo(msg.sender, token);
   }
 
-  function claimAllTokens() external override returns (bool) {
-    return _transferAllTokens(msg.sender);
+  function claimAllFunds() external override {
+    sendAllFundsTo(msg.sender);
   }
 
-  function sendEthTo(address to) external payable override OnlyNonZeroAddress(to) returns (bool) {
-    require(ethAvailable[to] > 0, "Allowance is zero");
-    require(address(this).balance > 0, "Balance is zero");
-    uint256 amount = _min(address(this).balance, ethAvailable[to]);
-    ethAvailable[to] -= amount;
-    payable(to).transfer(amount);
-    emit EthIsClaimed(to, amount);
-    return true;
+  function sendEthTo(address to) public payable override OnlyNonZeroAddress(to) {
+    uint256 amount = _min(ethAvailable[to], address(this).balance);
+    _transferEth(to, amount);
   }
 
   function sendTokenTo(address to, address token)
-    external
+    public
     override
     OnlyNonZeroAddress(to)
     OnlyNonZeroAddress(token)
-    returns (bool)
   {
-    require(tokenAvailable[to][token] > 0, "Allowance is zero");
-    require(IERC20(token).balanceOf(address(this)) > 0, "Balance is zero");
-    return _transferToken(to, token);
+    uint256 amount = _min(tokenAvailable[to][token], IERC20(token).balanceOf(address(this)));
+    _transferToken(to, token, amount);
   }
 
-  function sendAllTokensTo(address to) external override OnlyNonZeroAddress(to) returns (bool) {
-    return _transferAllTokens(to);
-  }
-
-  function claimFund() external payable override returns (bool) {
-    if (ethAvailable[msg.sender] > 0) {
-      uint256 amount = _min(address(this).balance, ethAvailable[msg.sender]);
-      ethAvailable[msg.sender] -= amount;
-      payable(msg.sender).transfer(amount);
-      emit EthIsClaimed(msg.sender, amount);
-    }
-    _transferAllTokens(msg.sender);
-    emit FundIsClaimed(msg.sender);
-    return true;
-  }
-
-  function sendFundTo(address to) external payable override OnlyNonZeroAddress(to) returns (bool) {
-    if (ethAvailable[to] > 0) {
-      uint256 amount = _min(address(this).balance, ethAvailable[to]);
-      ethAvailable[to] -= amount;
-      payable(to).transfer(amount);
-      emit EthIsClaimed(to, amount);
-    }
-    _transferAllTokens(to);
-    emit FundIsClaimed(to);
-    return true;
-  }
-
-  function _transferAllTokens(address to) internal returns (bool) {
+  function sendAllFundsTo(address to) public override OnlyNonZeroAddress(to) {
+    sendEthTo(to);
     for (uint256 i = 0; i < tokens.length; ++i) {
-      if (tokenAvailable[to][tokens[i]] > 0) _transferToken(to, tokens[i]);
+      if (tokenAvailable[to][tokens[i]] > 0) {
+        uint256 curTokenBalance = IERC20(tokens[i]).balanceOf(address(this));
+        _transferToken(to, tokens[i], _min(tokenAvailable[to][tokens[i]], curTokenBalance));
+      }
     }
-    emit AllTokensAreClaimed(to);
-    return true;
   }
 
-  function _transferToken(address to, address token) internal returns (bool) {
+  function _transferEth(address to, uint256 amount) internal {
+    require(amount <= address(this).balance, "Amount is greater than balance");
+    require(amount <= ethAvailable[to], "Amount is greater than available");
+    ethAvailable[to] -= amount;
+    payable(to).transfer(amount);
+    if (ethAvailable[to] > 0) emit ClaimedEthPartial(to, amount);
+    else emit EthIsClaimed(to, amount);
+  }
+
+  function _transferToken(
+    address to,
+    address token,
+    uint256 amount
+  ) internal {
     IERC20 tokenContract = IERC20(token);
-    uint256 amount = _min(tokenAvailable[to][token], tokenContract.balanceOf(address(this)));
-    if (amount == 0) return false;
+    require(amount <= tokenContract.balanceOf(address(this)), "Not enough tokens");
+    require(amount <= tokenAvailable[to][token], "Not enough allowed tokens");
     tokenAvailable[to][token] -= amount;
     tokenContract.transfer(to, amount);
-    emit TokenIsClaimed(to, token, amount);
-    return true;
+    if (tokenAvailable[to][token] > 0) emit ClaimedPartial(to, token, amount);
+    else emit TokenIsClaimed(to, token, amount);
   }
 
   function _min(uint256 a, uint256 b) internal pure returns (uint256) {
-    return a >= b ? b : a;
+    if (a < b) return a;
+    return b;
   }
 
   function balance() external view returns (uint256) {
