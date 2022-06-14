@@ -227,7 +227,7 @@ describe('FundDistribution', () => {
       await FundDistribution.setTokenApprove(addr2.address, TokenA.address, 100);
       await expect(
         FundDistribution.connect(addr2).claimTokenWithRevertIfInsufficientFunds(TokenA.address)
-      ).to.be.revertedWith('Not enough tokens');
+      ).to.be.revertedWith('Not enough balance');
     });
   });
   describe('test emit events', () => {

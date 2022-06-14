@@ -186,9 +186,9 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     uint256 amount
   ) internal {
     IERC20 tokenContract = IERC20(token);
-    require(amount <= tokenContract.balanceOf(address(this)), "Not enough tokens");
     require(amount <= tokenAvailable[to][token], "Not enough allowed tokens");
     tokenAvailable[to][token] -= amount;
+    //auto revert if not enough balance
     tokenContract.transfer(to, amount);
     if (tokenAvailable[to][token] > 0) emit ClaimedPartial(to, token, amount);
     else emit TokenIsClaimed(to, token, amount);
