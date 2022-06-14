@@ -97,7 +97,7 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     emit TokenApproveIsSet(to, token, amount);
   }
 
-  //the sender claim his ether
+  //the sender claim his ether, not revert if insufficient ether
   function claimEth() public override {
     sendEthTo(msg.sender);
   }
@@ -106,7 +106,7 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     sendEthToWithRevertIfInsufficientFunds(msg.sender);
   }
 
-  //the sender claim his token
+  //the sender claim his token, not revert if insufficient funds
   function claimToken(address token) external override {
     sendTokenTo(msg.sender, token);
   }
@@ -115,7 +115,7 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     sendTokenToWithRevertIfInsufficientFunds(msg.sender, token);
   }
 
-  //the sender claim all his funds
+  //the sender claim all his funds, not revert if insufficient funds
   function claimAllFunds() external override {
     sendAllFundsTo(msg.sender);
   }
@@ -124,7 +124,7 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     sendAllFundsToWithRevertIfInsufficientFunds(msg.sender);
   }
 
-  //claim eth on behalf of an address
+  //claim eth on behalf of an address, not revert if insufficient funds
   function sendEthTo(address to) public override onlyNonZeroAddress(to) {
     uint256 amount = _min(ethAvailable[to], address(this).balance);
     _transferEth(to, amount);
@@ -134,7 +134,7 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     _transferEth(to, ethAvailable[to]);
   }
 
-  //claim token on behalf of an address
+  //claim token on behalf of an address, not revert if insufficient funds
   function sendTokenTo(address to, address token)
     public
     override
@@ -149,7 +149,7 @@ contract FundDistribution is IFundDistribution, BoringOwnable {
     _transferToken(to, token, tokenAvailable[to][token]);
   }
 
-  //claim all funds on behalf of an address
+  //claim all funds on behalf of an address, not revert if insufficient funds
   function sendAllFundsTo(address to) public override onlyNonZeroAddress(to) {
     sendEthTo(to);
     for (uint256 i = 0; i < tokens.length; ++i) {
