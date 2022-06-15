@@ -4,7 +4,8 @@ pragma solidity ^0.8.0;
 interface IFundDistribution {
   event EthApproveIsSet(address to, uint256 amount);
   event TokenApproveIsSet(address to, address token, uint256 amount);
-  event TokenIsAdded(address token);
+  event TokenIsAdded(address sender, address token, uint256 amount);
+  event EthIsAdded(address sender, uint256 amount);
   event FundIsClaimed(address to);
   event EthIsClaimed(address to, uint256 amount);
   event TokenIsClaimed(address to, address token, uint256 amount);
@@ -12,9 +13,7 @@ interface IFundDistribution {
   event ClaimedPartial(address to, address token, uint256 amount);
   event ClaimedEthPartial(address to, uint256 amount);
 
-  function addToken(address token) external;
-
-  function receiveToken(address token, uint256 amount) external;
+  function depositToken(address token, uint256 amount) external;
 
   function setEthApprove(address to, uint256 amount) external;
 

@@ -34,61 +34,70 @@ describe('FundDistribution', () => {
 
   describe('transfer fund to contract', () => {
     it('should transfer ether to contract', async () => {
-      await addr1.sendTransaction({
+      await owner.sendTransaction({
         to: FundDistribution.address,
         value: ethers.utils.parseEther('1'),
       });
       const balance = await FundDistribution.balance();
       expect(balance).to.equal(ethers.utils.parseEther('1'));
     });
+    it('deposit eth works', async () => {
+      await FundDistribution.depositEth({value: ethers.utils.parseEther('1')});
+      const balance = await FundDistribution.balance();
+      expect(balance).to.equal(ethers.utils.parseEther('1'));
+    });
+    it('transfer eth revert if not funder', async () => {
+      await expect(
+        addr1.sendTransaction({
+          to: FundDistribution.address,
+          value: ethers.utils.parseEther('1'),
+        })
+      ).to.be.revertedWith('Only funders can call this function');
+    });
+    it('deposit eth revert if not funder', async () => {
+      await expect(
+        FundDistribution.connect(addr1).depositEth({value: ethers.utils.parseEther('1')})
+      ).to.be.revertedWith('Only funders can call this function');
+    });
+    it('deposit eth emit an event', async () => {
+      expect(await FundDistribution.depositEth({value: ethers.utils.parseEther('1')}))
+        .to.emit(FundDistribution, 'EthIsAdded')
+        .withArgs(owner.address, ethers.utils.parseEther('1'));
+    });
+    it('deposit eth revert if value is 0', async () => {
+      await expect(FundDistribution.depositEth({value: ethers.utils.parseEther('0')})).to.be.revertedWith(
+        'Invalid amount'
+      );
+    });
     it('should transfer tokens to contract', async () => {
-      await TokenA.transfer(FundDistribution.address, 50);
-      await TokenB.transfer(FundDistribution.address, 60);
-      await FundDistribution.addToken(TokenA.address);
-      await FundDistribution.addToken(TokenB.address);
+      await TokenA.approve(FundDistribution.address, 50);
+      await TokenB.approve(FundDistribution.address, 60);
+      await FundDistribution.depositToken(TokenA.address, 50);
+      await FundDistribution.depositToken(TokenB.address, 60);
       const balanceA = await TokenA.balanceOf(FundDistribution.address);
       const balanceB = await TokenB.balanceOf(FundDistribution.address);
       expect(balanceA).to.equal(50);
       expect(balanceB).to.equal(60);
     });
     it('addToken revert with address 0x0', async () => {
-      await expect(FundDistribution.addToken(constants.AddressZero)).to.be.revertedWith('Invalid address');
+      await expect(FundDistribution.depositToken(constants.AddressZero, 50)).to.be.revertedWith('Invalid address');
     });
     it('addToken revert if amount is zero', async () => {
-      await expect(FundDistribution.addToken(TokenA.address)).to.be.revertedWith('Amount is zero');
+      await expect(FundDistribution.depositToken(TokenA.address, 0)).to.be.revertedWith('Invalid amount');
     });
     it('addToken revert if not funder', async () => {
-      await expect(FundDistribution.connect(addr2).addToken(TokenA.address)).to.be.revertedWith(
+      await expect(FundDistribution.connect(addr2).depositToken(TokenA.address, 50)).to.be.revertedWith(
         'Only funders can call this function'
       );
-    });
-    it('One token can only be added once', async () => {
-      await TokenA.transfer(FundDistribution.address, 50);
-      await FundDistribution.addToken(TokenA.address);
-      await expect(FundDistribution.addToken(TokenA.address)).to.be.revertedWith('Token already added');
-    });
-
-    it('receiveToken works', async () => {
-      await TokenA.approve(FundDistribution.address, 50);
-      await TokenB.approve(FundDistribution.address, 60);
-      await FundDistribution.receiveToken(TokenA.address, 50);
-      await FundDistribution.receiveToken(TokenB.address, 60);
-      const balanceA = await TokenA.balanceOf(FundDistribution.address);
-      const balanceB = await TokenB.balanceOf(FundDistribution.address);
-      expect(balanceA).to.equal(50);
-      expect(balanceB).to.equal(60);
-    });
-    it('reverted by token amount is zero', async () => {
-      await expect(FundDistribution.receiveToken(TokenA.address, 0)).to.be.revertedWith('Amount is zero');
     });
   });
 
   describe('amount is set', () => {
     beforeEach(async () => {
-      await TokenA.transfer(FundDistribution.address, 50);
-      await TokenB.transfer(FundDistribution.address, 60);
-      await FundDistribution.addToken(TokenA.address);
-      await FundDistribution.addToken(TokenB.address);
+      await TokenA.approve(FundDistribution.address, 50);
+      await TokenB.approve(FundDistribution.address, 60);
+      await FundDistribution.depositToken(TokenA.address, 50);
+      await FundDistribution.depositToken(TokenB.address, 60);
     });
     it('should set ether amount', async () => {
       await FundDistribution.setEthApprove(addr1.address, ethers.utils.parseEther('50'));
@@ -116,10 +125,10 @@ describe('FundDistribution', () => {
   });
   describe('claimFunds', () => {
     beforeEach(async () => {
-      await TokenA.transfer(FundDistribution.address, 50);
-      await TokenB.transfer(FundDistribution.address, 60);
-      await FundDistribution.addToken(TokenA.address);
-      await FundDistribution.addToken(TokenB.address);
+      await TokenA.approve(FundDistribution.address, 50);
+      await TokenB.approve(FundDistribution.address, 60);
+      await FundDistribution.depositToken(TokenA.address, 50);
+      await FundDistribution.depositToken(TokenB.address, 60);
       await owner.sendTransaction({
         to: FundDistribution.address,
         value: ethers.utils.parseEther('1'),
@@ -199,9 +208,7 @@ describe('FundDistribution', () => {
       await FundDistribution.setEthApprove(addr2.address, ethers.utils.parseEther('2'));
       await FundDistribution.setTokenApprove(addr2.address, TokenA.address, 100);
       await FundDistribution.setTokenApprove(addr2.address, TokenB.address, 100);
-      await expect(FundDistribution.connect(addr2).claimAllFundsWithRevertIfInsufficientFunds()).to.be.revertedWith(
-        'Not enough balance'
-      );
+      await expect(FundDistribution.connect(addr2).claimAllFundsWithRevertIfInsufficientFunds()).to.be.reverted;
     });
     it('claim Ether', async () => {
       await FundDistribution.setEthApprove(addr2.address, 50);
@@ -209,9 +216,7 @@ describe('FundDistribution', () => {
     });
     it('claim Ether revert if insufficient balance', async () => {
       await FundDistribution.setEthApprove(addr2.address, ethers.utils.parseEther('2'));
-      await expect(FundDistribution.connect(addr2).claimEthWithRevertIfInsufficientFunds()).to.be.revertedWith(
-        'Not enough balance'
-      );
+      await expect(FundDistribution.connect(addr2).claimEthWithRevertIfInsufficientFunds()).to.be.reverted;
     });
     it('claim Ether to self', async () => {
       await FundDistribution.setEthApprove(addr2.address, 50);
@@ -232,10 +237,10 @@ describe('FundDistribution', () => {
   });
   describe('test emit events', () => {
     beforeEach(async () => {
-      await TokenA.transfer(FundDistribution.address, 50);
-      await TokenB.transfer(FundDistribution.address, 60);
-      await FundDistribution.addToken(TokenA.address);
-      await FundDistribution.addToken(TokenB.address);
+      await TokenA.approve(FundDistribution.address, 50);
+      await TokenB.approve(FundDistribution.address, 60);
+      await FundDistribution.depositToken(TokenA.address, 50);
+      await FundDistribution.depositToken(TokenB.address, 60);
       await owner.sendTransaction({
         to: FundDistribution.address,
         value: ethers.utils.parseEther('1'),
