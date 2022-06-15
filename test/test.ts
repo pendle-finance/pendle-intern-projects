@@ -297,27 +297,144 @@ describe("TestContract", () => {
 
   describe("Test ERC20 claim functions", () => {
     beforeEach(async () => {
-      await airdropContract.airdropMultiUserOneToken([a.address,b.address],erc20Contract.address,[2000,2000]);
+      await airdropContract.airdropMultiUserOneToken([a.address,b.address,c.address],erc20Contract.address,[1000,2000,3000]);
+      await airdropContract.airdropMultiUserOneToken([a.address,b.address,c.address],erc20Contract1.address,[3000,1000,2000]);
+      let amount = utils.parseEther("1000");
+      let amount1 = utils.parseEther("5000");
+      let amount2 = utils.parseEther("10000");
+      let total = utils.parseEther("16000");
+      await airdropContract.airdropMultiUserETH([a.address,b.address,c.address],[amount,amount1,amount2],{ value: total });
+    });
+    
+    it("Amount transferred from smart contract to user", async () => {
+      let aPrev = await erc20Contract.balanceOf(a.address);
+      let contractPrev = await erc20Contract.balanceOf(airdropContract.address);
+      await airdropContract.connect(a).claim(a.address,erc20Contract.address,1000);
+      let aCur = await erc20Contract.balanceOf(a.address);
+      let contractCur = await erc20Contract.balanceOf(airdropContract.address);
+      let aDiff = await toNumber(aCur) - await toNumber(aPrev);
+      let contractDiff = await toNumber(contractPrev) - await toNumber(contractCur);
+      expect(aDiff).to.be.eq(1000);
+      expect(contractDiff).to.be.eq(1000);   
+    });
+
+    it("For claim ETH, Amount transferred from smart contract to user", async () => {
+      let aETH = await a.getBalance();
+      let contractETH = await ethers.provider.getBalance(airdropContract.address);
+      await airdropContract.claimETH(a.address,utils.parseEther("1000"));
+      let aETHCur = await a.getBalance();
+      let contractETHCur = await ethers.provider.getBalance(airdropContract.address);
+      expect(WeiconvertToETH(aETHCur.sub(aETH))).to.be.eq(1000);
+      expect(WeiconvertToETH(contractETH.sub(contractETHCur))).to.be.eq(1000);   
+    });
+
+    it("Claim by different user goes to the airdropTo", async () => {
+      let aPrev = await erc20Contract.balanceOf(a.address);
+      let bPrev = await erc20Contract.balanceOf(b.address);
+      await airdropContract.connect(b).claim(a.address,erc20Contract.address,1000);
+      let aCur = await erc20Contract.balanceOf(a.address);
+      let bCur = await erc20Contract.balanceOf(b.address);
+      let aDiff = await toNumber(aCur) - await toNumber(aPrev);
+      let bDiff = await toNumber(bCur) - await toNumber(bPrev);
+      expect(aDiff).to.be.eq(1000);
+      expect(bDiff).to.be.eq(0);   
+    });
+
+    it("Test claim multiple times, multiple people", async () => {
+      let aPrev = await erc20Contract.balanceOf(a.address);
+      let bPrev = await erc20Contract.balanceOf(b.address);
+      await airdropContract.claim(a.address,erc20Contract.address,500);
+      let aCur = await erc20Contract.balanceOf(a.address);
+      let aDiff = await toNumber(aCur) - await toNumber(aPrev);
+      expect(aDiff).to.be.eq(500);
+      await airdropContract.claim(b.address,erc20Contract.address,2000);
+      let bCur = await erc20Contract.balanceOf(b.address);
+      let bDiff = await toNumber(bCur) - await toNumber(bPrev);
+      expect(bDiff).to.be.eq(2000);
+      await airdropContract.claim(a.address,erc20Contract.address,500);
+      aCur = await erc20Contract.balanceOf(a.address);
+      aDiff = await toNumber(aCur) - await toNumber(aPrev);
+      expect(aDiff).to.be.eq(1000);
+      let cPrev = await erc20Contract1.balanceOf(c.address);
+      await airdropContract.claim(c.address,erc20Contract1.address,2000);
+      let cCur = await erc20Contract1.balanceOf(c.address);
+      let cDiff = await toNumber(cCur) - await toNumber(cPrev);
+      expect(cDiff).to.be.eq(2000);
+    });
+
+    it("Test claim All function", async () => {
+      let aPrev = await erc20Contract.balanceOf(a.address);
+      let aPrev1 = await erc20Contract1.balanceOf(a.address);
+      let aETH = await a.getBalance();
+      let amount = utils.parseEther("1000");
+      await airdropContract.claimAll(a.address, [erc20Contract.address,erc20Contract1.address,CONSTANTS.ZERO_ADDRESS],[1000,3000,amount]);
+      let aCur = await erc20Contract.balanceOf(a.address);
+      let aCur1 = await erc20Contract1.balanceOf(a.address);
+      let aETHCur = await a.getBalance();
+      expect(WeiconvertToETH(aETHCur.sub(aETH))).to.be.eq(1000);
+      expect(aCur.sub(aPrev)).to.be.eq(1000);
+      expect(aCur1.sub(aPrev1)).to.be.eq(3000);
+    });
+
+    it("Test claim amount > allocated", async () => {
+      await expect(airdropContract.claim(a.address,erc20Contract.address,1001)).to.be.revertedWith("AnythingAirdrop: claiming more ERC20 than allocation");
+      await expect(airdropContract.claim(a.address,erc20Contract1.address,3001)).to.be.revertedWith("AnythingAirdrop: claiming more ERC20 than allocation");
+      await expect(airdropContract.claimETH(a.address,utils.parseEther("1001"))).to.be.revertedWith("AnythingAirdrop: claiming more ETH than allocation");
+      await expect(airdropContract.claimAll(a.address, [erc20Contract.address,erc20Contract1.address],[1001,3001])).to.be.revertedWith("AnythingAirdrop: claiming more ERC20 than allocation");
     });
   });
-  // describe("Test ETH airdrop functions", () => {
-  //   it("ETH Airdrop", async () => {
-  //     let adminBal = await erc20Contract.balanceOf(admin.address);
-  //     expect(adminBal).to.be.eq(10000);
-  //   });
 
-  //   it("Airdrop multiple users ETH", async () => {
-  //     let adminBal = await erc20Contract.balanceOf(admin.address);
-  //     expect(adminBal).to.be.eq(10000);
-  //   });
+  describe("Test all ownership functions", () => {
+    it("All ownership functions", async () => {
+      await expect(airdropContract.connect(a).airdrop(b.address,erc20Contract.address,100)).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(airdropContract.connect(b).airdropETH(b.address,100)).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(airdropContract.connect(a).airdropMultiUserOneToken([b.address],erc20Contract.address,[100])).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(airdropContract.connect(c).airdropMultiUserETH([b.address],[100])).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(airdropContract.connect(a).airdropOneUserMultiToken(b.address,[erc20Contract.address],[100])).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(airdropContract.connect(c).takeback(b.address,erc20Contract.address,100)).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(airdropContract.connect(c).takebackETH(b.address,[100])).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(airdropContract.connect(c).shiftAround(b.address,a.address,erc20Contract.address,100)).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+  });
 
-  //   it("ETH Airdrop amount > amount given", async () => {
-  //     let adminBal = await erc20Contract.balanceOf(admin.address);
-  //     expect(adminBal).to.be.eq(10000);
-  //   });
+  describe("Test takeback function", () => {
+    it("Takeback function", async () => {
+      let adminBalance = await erc20Contract.balanceOf(admin.address);
+      let contractBalance = await erc20Contract.balanceOf(airdropContract.address);
+      await airdropContract.connect(admin).airdrop(a.address,erc20Contract.address,1000);
+      await airdropContract.connect(admin).takeback(a.address,erc20Contract.address,500);
+      let adminBalance1 = await erc20Contract.balanceOf(admin.address);
+      let contractBalance1 = await erc20Contract.balanceOf(airdropContract.address);
+      expect(contractBalance1.sub(contractBalance)).to.be.eq(500);
+      expect(adminBalance.sub(adminBalance1)).to.be.eq(500);
+      await airdropContract.connect(admin).takeback(a.address,erc20Contract.address,500);
+      adminBalance1 = await erc20Contract.balanceOf(admin.address);
+      contractBalance1 = await erc20Contract.balanceOf(airdropContract.address);
+      expect(contractBalance1.sub(contractBalance)).to.be.eq(0);
+      expect(adminBalance1.sub(adminBalance)).to.be.eq(0);
+    });
 
+    it("Takeback amount > allocation", async () => {
+      await airdropContract.connect(admin).airdrop(a.address,erc20Contract.address,1000);
+      await airdropContract.connect(admin).takeback(a.address,erc20Contract.address,500);
+      await expect(airdropContract.connect(admin).takeback(a.address,erc20Contract.address,501)).to.be.revertedWith("AnythingAirdrop: claiming more ERC20 than allocation");
+    });
+  });
 
-  // });
+  describe("Test shiftAround function", () => {
+    it("ShiftAround", async () => {
+      await airdropContract.connect(admin).airdrop(a.address,erc20Contract.address,1000);
+      await airdropContract.shiftAround(a.address,b.address,erc20Contract.address,500);
+      let aAmount = await airdropContract.getERC20Distribution(a.address,erc20Contract.address);
+      let bAmount = await airdropContract.getERC20Distribution(b.address,erc20Contract.address);
+      expect(aAmount).to.be.eq(500);
+      expect(bAmount).to.be.eq(500);
+    });
 
-
+    it("ShiftAround amount > allocated or person with no balance", async () => {
+      await airdropContract.connect(admin).airdrop(a.address,erc20Contract.address,1000);
+      await expect(airdropContract.shiftAround(a.address,b.address,erc20Contract.address,1001)).to.be.revertedWith("AnythingAirdrop: claiming more ERC20 than allocation");
+      await expect(airdropContract.shiftAround(c.address,b.address,erc20Contract.address,1)).to.be.revertedWith("AnythingAirdrop: claiming more ERC20 than allocation");
+    });
+  });
 });
