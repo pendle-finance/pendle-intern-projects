@@ -40,6 +40,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     //require msg.value >= amount and refund ETH dust instead??
   }
 
+  //Gas optimized to do only 1 external call safetransferFrom for up to infinite number of people
   function airdropMultiUserOneToken(
     address[] calldata toAddresses,
     address tokenAddress,
@@ -58,7 +59,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     TransferHelper.safeTransferFrom(tokenAddress, msg.sender, address(this), total);
   }
 
-  //Pls check this
+  //Gas optimized to do only 1 external call safetransferETH for up to infinite number of people
   function airdropMultiUserETH(address[] calldata toAddresses, uint256[] calldata dropAmount)
     external
     payable
@@ -82,6 +83,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     //require msg.value >= totalETH and refund ETH dust instead??
   }
 
+  //You can't really reduce external calls for this :(
   function airdropOneUserMultiToken(
     address toAddress,
     address[] calldata tokenAddresses,
@@ -131,7 +133,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
       else _claimETH(to, claimAmount);
     }
   }
-
+  
   function takeback(
     address from,
     address tokenAddress,
