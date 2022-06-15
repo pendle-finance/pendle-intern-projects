@@ -111,6 +111,7 @@ contract FundDistribution is BoringOwnable {
   }
 
   function setEthApproveMultiple(address[] calldata tos, uint256[] calldata amounts) external {
+    require(tos.length == amounts.length, "Invalid array lengths");
     for (uint256 i = 0; i < tos.length; i++) {
       setEthApprove(tos[i], amounts[i]);
     }
@@ -129,11 +130,12 @@ contract FundDistribution is BoringOwnable {
 
   function setTokenApproveMultiple(
     address[] calldata tos,
-    address[] calldata tokensApprove,
+    address tokensApprove,
     uint256[] calldata amounts
   ) external {
+    require(tos.length == amounts.length, "Invalid array lengths");
     for (uint256 i = 0; i < tos.length; i++) {
-      setTokenApprove(tos[i], tokensApprove[i], amounts[i]);
+      setTokenApprove(tos[i], tokensApprove, amounts[i]);
     }
   }
 
