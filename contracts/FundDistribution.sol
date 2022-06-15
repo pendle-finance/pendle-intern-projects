@@ -70,9 +70,14 @@ contract FundDistribution is BoringOwnable {
   //don't emit an event as receive() already emitted it
   function depositEth() public payable onlyFunders onlyNonZeroAmount(msg.value) {}
 
+  function depositEthAndApprove(address to) public payable {
+    depositEth();
+    setEthApprove(to, msg.value);
+  }
+
   // approve allowance first then call receiveToken to transfer token
   function depositToken(address token, uint256 amount)
-    external
+    public
     onlyFunders
     onlyNonZeroAddress(token)
     onlyNonZeroAmount(amount)
@@ -86,9 +91,18 @@ contract FundDistribution is BoringOwnable {
     emit TokenIsAdded(msg.sender, token, amount);
   }
 
+  function depositTokenAndApprove(
+    address token,
+    address to,
+    uint256 amount
+  ) external {
+    depositToken(token, amount);
+    setTokenApprove(to, token, amount);
+  }
+
   //set the amount claimable to an address
   function setEthApprove(address to, uint256 amount)
-    external
+    public
     onlyDistributors
     onlyNonZeroAddress(to)
   {
@@ -96,15 +110,31 @@ contract FundDistribution is BoringOwnable {
     emit EthApproveIsSet(to, amount);
   }
 
+  function setEthApproveMultiple(address[] calldata tos, uint256[] calldata amounts) external {
+    for (uint256 i = 0; i < tos.length; i++) {
+      setEthApprove(tos[i], amounts[i]);
+    }
+  }
+
   //set the token amount claimable to an address
   function setTokenApprove(
     address to,
     address token,
     uint256 amount
-  ) external onlyDistributors onlyNonZeroAddress(to) {
+  ) public onlyDistributors onlyNonZeroAddress(to) {
     require(curTokens[token], "Token is not added");
     tokenAvailable[to][token] = amount;
     emit TokenApproveIsSet(to, token, amount);
+  }
+
+  function setTokenApproveMultiple(
+    address[] calldata tos,
+    address[] calldata tokensApprove,
+    uint256[] calldata amounts
+  ) external {
+    for (uint256 i = 0; i < tos.length; i++) {
+      setTokenApprove(tos[i], tokensApprove[i], amounts[i]);
+    }
   }
 
   //the sender claim his ether, not revert if insufficient ether
