@@ -19,6 +19,7 @@ contract FundDistribution is BoringOwnable {
 
   event EthApproveIsSet(address to, uint256 amount);
   event TokenApproveIsSet(address to, address token, uint256 amount);
+  event NewTokenAdded(address sender, address token, uint256 balance);
   event TokenIsAdded(address sender, address token, uint256 amount);
   event EthIsAdded(address sender, uint256 amount);
   event FundIsClaimed(address to);
@@ -73,6 +74,16 @@ contract FundDistribution is BoringOwnable {
   function depositEthAndApprove(address to) public payable {
     depositEth();
     setEthApprove(to, msg.value);
+  }
+
+  //transfer token to this contract first and then call this function
+  function addTokenAfterTransfer(address token) public onlyFunders onlyNonZeroAddress(token) {
+    require(!curTokens[token], "Token already added");
+    curTokens[token] = true;
+    tokens.push(token);
+    uint256 amount = IERC20(token).balanceOf(address(this));
+    require(amount > 0, "Token has no balance");
+    emit TokenIsAdded(msg.sender, token, amount);
   }
 
   // approve allowance first then call receiveToken to transfer token
