@@ -71,9 +71,9 @@ contract FundDistribution is BoringOwnable {
   //don't emit an event as receive() already emitted it
   function depositEth() public payable onlyFunders onlyNonZeroAmount(msg.value) {}
 
-  function depositEthAndApprove(address to) public payable {
+  function depositEthAndDistribute(address to) public payable {
     depositEth();
-    setEthApprove(to, msg.value);
+    setEthDistribute(to, msg.value);
   }
 
   //transfer token to this contract first and then call this function
@@ -102,17 +102,17 @@ contract FundDistribution is BoringOwnable {
     emit TokenIsAdded(msg.sender, token, amount);
   }
 
-  function depositTokenAndApprove(
+  function depositTokenAndDistribute(
     address token,
     address to,
     uint256 amount
   ) external {
     depositToken(token, amount);
-    setTokenApprove(to, token, amount);
+    setTokenDistribute(to, token, amount);
   }
 
   //set the amount claimable to an address
-  function setEthApprove(address to, uint256 amount)
+  function setEthDistribute(address to, uint256 amount)
     public
     onlyDistributors
     onlyNonZeroAddress(to)
@@ -121,15 +121,15 @@ contract FundDistribution is BoringOwnable {
     emit EthApproveIsSet(to, amount);
   }
 
-  function setEthApproveMultiple(address[] calldata tos, uint256[] calldata amounts) external {
+  function setEthDistributeMultiple(address[] calldata tos, uint256[] calldata amounts) external {
     require(tos.length == amounts.length, "Invalid array lengths");
     for (uint256 i = 0; i < tos.length; i++) {
-      setEthApprove(tos[i], amounts[i]);
+      setEthDistribute(tos[i], amounts[i]);
     }
   }
 
   //set the token amount claimable to an address
-  function setTokenApprove(
+  function setTokenDistribute(
     address to,
     address token,
     uint256 amount
@@ -146,7 +146,7 @@ contract FundDistribution is BoringOwnable {
   ) external {
     require(tos.length == amounts.length, "Invalid array lengths");
     for (uint256 i = 0; i < tos.length; i++) {
-      setTokenApprove(tos[i], tokensApprove, amounts[i]);
+      setTokenDistribute(tos[i], tokensApprove, amounts[i]);
     }
   }
 
