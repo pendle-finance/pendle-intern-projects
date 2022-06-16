@@ -16,7 +16,6 @@ contract TokenDistributor{
 
     event ERC20Set (address tokenAddress);
     event ClaimableUpdated (address receiverAddress, uint ethAmt, uint erc20Amt);
-    event Refund (uint amount);
     event Claim (address receiver, uint ethAmt, uint erc20Amt);
 
 
@@ -40,7 +39,7 @@ contract TokenDistributor{
         public 
         payable 
         onlyOwner {
-            require(msg.value >= ethAmt, "Insufficient eth");
+            require(msg.value == ethAmt, "Insufficient eth");
             require(erc20Amt >= 0, "Invalid erc20 amount");
             require(ERC20Contract.balanceOf(address(this)) - allocatedERC20 >= erc20Amt, "Insufficient ERC20");
             
@@ -48,10 +47,6 @@ contract TokenDistributor{
             claimableETH[receiver] += ethAmt;
             claimableERC20[receiver] += erc20Amt;
 
-            if (msg.value > ethAmt){
-                payable(msg.sender).transfer(msg.value-ethAmt);
-                emit Refund(msg.value-ethAmt);
-            }
             emit ClaimableUpdated(receiver, ethAmt, erc20Amt);
     }
 
