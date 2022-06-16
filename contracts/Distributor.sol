@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./IDistributor.sol";
-import "../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./helpers/IERC20.sol";
 import "../node_modules/hardhat/console.sol";
 
 contract Distributor is IDistributor {
