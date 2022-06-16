@@ -13,8 +13,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     Idk if this is better but it is what I thought of initially
   */
   //mapping of recepientAddress => tokenAddress => claimAmount
-  mapping(address => mapping(address => uint256)) private erc20Distribution;
-  mapping(address => uint256) private ethDistribution;
+  mapping(address => mapping(address => uint256)) private tokenDistribution;
 
   constructor() {}
 
@@ -27,17 +26,15 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     address to,
     address tokenAddress,
     uint256 amount
-  ) external onlyOwner {
-    _airdrop(to, tokenAddress, amount);
-  }
-
-  //Recommended to use WETH instead of ETH
-  function airdropETH(address to, uint256 amount) external payable onlyOwner {
-    require(msg.value >= amount, "AnythingAirdrop: ETH given is not equal to allocation");
-    _depositETH(to, amount);
-    uint256 remainder = msg.value - amount;
-    if (remainder > 0) TransferHelper.safeTransferETH(msg.sender, remainder);
-    //require msg.value >= amount and refund ETH dust instead??
+  ) external payable onlyOwner {
+    if (tokenAddress != address(0)) {
+      require(msg.value == 0, "AnythingAirdrop: ETH given for ERC20 airdrop");
+      _airdrop(to, tokenAddress, amount);
+    }
+    else {
+      require(msg.value == amount, "AnythingAirdrop: ETH given is not equal to allocation");
+      _depositETH(to, amount);
+    }
   }
 
   /// @dev _airdrop() is not used because code is implemented differently -> gas optimized so only 1 external call of safeTransferFrom is executed to save gas.
@@ -46,42 +43,30 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     address[] calldata toAddresses,
     address tokenAddress,
     uint256[] calldata dropAmount
-  ) external onlyOwner {
+  ) external payable onlyOwner {
     uint256 toLength = toAddresses.length;
     require(
       dropAmount.length == toLength,
       "AnythingAirdrop: Invalid input parameters given (Length does not match)"
     );
-    uint256 total;
-    for (uint256 i = 0; i < toLength; i++) {
-      total += dropAmount[i];
-      _deposit(toAddresses[i], tokenAddress, dropAmount[i]);
+    if (tokenAddress != address(0)) {
+      uint256 total;
+      for (uint256 i = 0; i < toLength; i++) {
+        total += dropAmount[i];
+        _deposit(toAddresses[i], tokenAddress, dropAmount[i]);
+      }
+      TransferHelper.safeTransferFrom(tokenAddress, msg.sender, address(this), total);
     }
-    TransferHelper.safeTransferFrom(tokenAddress, msg.sender, address(this), total);
-  }
-
-  //Gas optimized to do only 1 external call safetransferETH for up to infinite number of people
-  function airdropMultiUserETH(address[] calldata toAddresses, uint256[] calldata dropAmount)
-    external
-    payable
-    onlyOwner
-  {
-    uint256 toLength = toAddresses.length;
-    require(
-      dropAmount.length == toLength,
-      "AnythingAirdrop: Invalid input parameters given (Length does not match)"
-    );
-    uint256 totalETH = 0;
-    uint256 rewards;
-    for (uint256 i = 0; i < toLength; i++) {
-      rewards = dropAmount[i];
-      totalETH += rewards;
-      _depositETH(toAddresses[i], rewards);
+    else {
+      uint256 totalETH = 0;
+      uint256 rewards;
+      for (uint256 i = 0; i < toLength; i++) {
+        rewards = dropAmount[i];
+        totalETH += rewards;
+        _depositETH(toAddresses[i], rewards);
+      }
+      require(msg.value == totalETH, "AnythingAirdrop: ETH given is not equal to allocation");
     }
-    require(msg.value >= totalETH, "AnythingAirdrop: ETH given is not equal to allocation");
-    uint256 remainder = msg.value - totalETH;
-    if (remainder > 0) TransferHelper.safeTransferETH(msg.sender, remainder);
-    //require msg.value >= totalETH and refund ETH dust instead??
   }
 
   //You can't really reduce external calls for this :(
@@ -105,13 +90,8 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     address tokenAddress,
     uint256 amount
   ) external {
-    _claim(to, tokenAddress, amount);
-  }
-
-  function claimETH(address to,
-    uint256 amount
-  ) external {
-    _claimETH(to, amount);
+    if (tokenAddress != address(0)) _claim(to, tokenAddress, amount);
+    else _claimETH(to, amount);
   }
 
   function claimAll(
@@ -157,17 +137,17 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
       uint256 allocatedAmount = getERC20Distribution(shiftFrom, tokenAddress);
       require(allocatedAmount >= amount, "AnythingAirdrop: shifting more ERC20 than allocation");
       unchecked {
-        erc20Distribution[shiftFrom][tokenAddress] -= amount;
+        tokenDistribution[shiftFrom][tokenAddress] -= amount;
       }
-      erc20Distribution[shiftTo][tokenAddress] += amount;
+      tokenDistribution[shiftTo][tokenAddress] += amount;
     }
     else {
       uint256 allocatedAmount = getETHDistribution(shiftFrom);
       require(allocatedAmount >= amount, "AnythingAirdrop: shifting more ETH than allocation");
       unchecked {
-        ethDistribution[shiftFrom] -= amount;
+        tokenDistribution[address(0)][shiftFrom] -= amount;
       }
-      ethDistribution[shiftTo] += amount;
+      tokenDistribution[address(0)][shiftTo] += amount;
     }
     emit ShiftAround(shiftFrom, shiftTo, tokenAddress, amount);
   }
@@ -185,12 +165,12 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     //Should we trust that the TransferFrom function of the token smart contract will handle transfer to 0 address (hence no need to check to is 0 address) or do we have to enforce this?
     //when tokenAddress is 0, it refers to ETH, so it would good if there's no tokenAddress with 0 address
     //Why there's no safeTransferFrom in _deposit: so that batchdeposit is possible in airdropMultiUserOneToken (saving gas due to less external calls?)
-    erc20Distribution[to][tokenAddress] += amount;
+    tokenDistribution[to][tokenAddress] += amount;
     emit Airdrop(to, tokenAddress, amount);
   }
 
   function _depositETH(address to, uint256 amount) internal checkZeroAddress(to){
-    ethDistribution[to] += amount;
+    tokenDistribution[address(0)][to] += amount;
     emit Airdrop(to, address(0), amount);
   }
 
@@ -208,7 +188,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     uint256 allocatedAmount = getERC20Distribution(redeemFrom, tokenAddress);
     require(allocatedAmount >= amount, "AnythingAirdrop: claiming more ERC20 than allocation");
     unchecked {
-      erc20Distribution[redeemFrom][tokenAddress] -= amount;  
+      tokenDistribution[redeemFrom][tokenAddress] -= amount;  
     }
     TransferHelper.safeTransfer(tokenAddress, redeemTo, amount);
   }
@@ -217,7 +197,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     uint256 allocatedAmount = getETHDistribution(redeemFrom);
     require(allocatedAmount >= amount, "AnythingAirdrop: claiming more ETH than allocation");
     unchecked {
-      ethDistribution[redeemFrom] -= amount;  
+      tokenDistribution[address(0)][redeemFrom] -= amount;  
     }
     TransferHelper.safeTransferETH(redeemTo, amount);
   }
@@ -227,7 +207,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     view
     returns (uint256 allocatedAmount)
   {
-    return erc20Distribution[userAddress][tokenAddress];
+    return tokenDistribution[userAddress][tokenAddress];
   }
 
   function getETHDistribution(address userAddress)
@@ -235,6 +215,6 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     view
     returns (uint256 allocatedAmount)
   {
-    return ethDistribution[userAddress];
+    return tokenDistribution[address(0)][userAddress];
   }
 }

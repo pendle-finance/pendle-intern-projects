@@ -15,19 +15,13 @@ interface IAnythingAirdrop {
     address to,
     address tokenAddress,
     uint256 amount
-  ) external;
-
-  function airdropETH(address to, uint256 amount) external payable;
+  ) external payable;
 
   function airdropMultiUserOneToken(
     address[] calldata toAddresses,
     address tokenAddress,
     uint256[] calldata dropAmount
-  ) external;
-
-  function airdropMultiUserETH(address[] calldata toAddresses, uint256[] calldata dropAmount)
-    external
-    payable;
+  ) external payable;
 
   function airdropOneUserMultiToken(
     address toAddress,

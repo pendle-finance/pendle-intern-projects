@@ -169,6 +169,10 @@ describe("TestContract", () => {
       await expect(airdropContract.airdrop(b.address,erc20Contract.address,6001)).to.be.revertedWith("TransferHelper::transferFrom: transferFrom failed");
     });
 
+    it("ERC20 Airdrop but tries to give ETH", async () => {
+      await expect(airdropContract.airdrop(b.address,erc20Contract.address,6001, {value : 1})).to.be.revertedWith("AnythingAirdrop: ETH given for ERC20 airdrop");
+    });
+    
     it("Airdrop 1 User Multiple Tokens -> airdrop to same person more than once, airdrop to multiple people & airdrop up to owned amount", async () => {
       await airdropContract.airdropOneUserMultiToken(a.address,[erc20Contract.address,erc20Contract1.address],[2000,4000]);
       let aAmount = await airdropContract.getERC20Distribution(a.address,erc20Contract.address);
@@ -244,44 +248,45 @@ describe("TestContract", () => {
 
   describe("Test ETH airdrop functions", () => {
     it("ETH Airdrop -> airdrop multiple times & to multiple people", async () => {
-      await airdropContract.airdropETH(a.address,utils.parseEther("1000"),{ value: utils.parseEther("1000") });
+      await airdropContract.airdrop(a.address, CONSTANTS.ZERO_ADDRESS, utils.parseEther("1000"), { value: utils.parseEther("1000") });
       let aAmount = await airdropContract.getETHDistribution(a.address);
       expect(WeiconvertToETH(aAmount)).to.be.eq(1000); 
-      await airdropContract.airdropETH(a.address,utils.parseEther("500000"),{ value: utils.parseEther("500000") });
+      await airdropContract.airdrop(a.address, CONSTANTS.ZERO_ADDRESS, utils.parseEther("500000"), { value: utils.parseEther("500000") });
       aAmount = await airdropContract.getETHDistribution(a.address);
       expect(WeiconvertToETH(aAmount)).to.be.eq(501000); 
-      await airdropContract.airdropETH(b.address,utils.parseEther("1000"),{ value: utils.parseEther("1000") });
+      await airdropContract.airdrop(b.address,CONSTANTS.ZERO_ADDRESS, utils.parseEther("1000"),{ value: utils.parseEther("1000") });
       let bAmount = await airdropContract.getETHDistribution(b.address);
       expect(WeiconvertToETH(bAmount)).to.be.eq(1000); 
     });
 
     it("ETH Airdrop amount > owned", async () => {
       //InvalidInputError -> not enough funds to pay gas
-      await expect(airdropContract.airdropETH(a.address,utils.parseEther("1000000000000000001"),{ value: utils.parseEther("1000000000000000001") })).to.Throw;
+      await expect(airdropContract.airdrop(a.address,CONSTANTS.ZERO_ADDRESS,utils.parseEther("1000000000000000001"),{ value: utils.parseEther("1000000000000000001") })).to.Throw;
     });
 
     it("ETH Airdrop amount != msg.value", async () => {
-      await expect(airdropContract.airdropETH(a.address,utils.parseEther("1000"),{ value: utils.parseEther("1") })).to.be.revertedWith("AnythingAirdrop: ETH given is not equal to allocation");
+      await expect(airdropContract.airdrop(a.address,CONSTANTS.ZERO_ADDRESS,utils.parseEther("1000"),{ value: utils.parseEther("1") })).to.be.revertedWith("AnythingAirdrop: ETH given is not equal to allocation");
     });
 
-    it("ETH Airdrop > amount gives contract funds and refunds dust", async () => {
-      let amount = utils.parseEther("1000");
-      let total = utils.parseEther("1001");
-      await airdropContract.airdropETH(a.address, amount, { value: total });
-      let contractETH = await ethers.provider.getBalance(airdropContract.address);
-      expect(contractETH).to.be.eq(amount);
-    });
+    // deprecated as this function has been removed -> save gas and unintended function purpose
+    // it("ETH Airdrop > amount gives contract funds and refunds dust", async () => {
+    //   let amount = utils.parseEther("1000");
+    //   let total = utils.parseEther("1001");
+    //   await airdropContract.airdrop(a.address, CONSTANTS.ZERO_ADDRESS, amount, { value: total });
+    //   let contractETH = await ethers.provider.getBalance(airdropContract.address);
+    //   expect(contractETH).to.be.eq(amount);
+    // });
 
     it("ETH Airdrop Multi User", async () => {
       let amount = utils.parseEther("1000");
       let amount1 = utils.parseEther("5000");
       let total = utils.parseEther("6000");
-      await airdropContract.airdropMultiUserETH([a.address,b.address],[amount, amount1],{ value: total });
+      await airdropContract.airdropMultiUserOneToken([a.address,b.address],CONSTANTS.ZERO_ADDRESS,[amount, amount1],{ value: total });
       let aAmount = await airdropContract.getETHDistribution(a.address);
       expect(WeiconvertToETH(aAmount)).to.be.eq(1000);
       let bAmount = await airdropContract.getETHDistribution(b.address);
       expect(WeiconvertToETH(bAmount)).to.be.eq(5000);
-      await airdropContract.airdropMultiUserETH([a.address,c.address],[amount1, amount],{ value: total });
+      await airdropContract.airdropMultiUserOneToken([a.address,c.address],CONSTANTS.ZERO_ADDRESS,[amount1, amount],{ value: total });
       aAmount = await airdropContract.getETHDistribution(a.address);
       expect(WeiconvertToETH(aAmount)).to.be.eq(6000);
       let cAmount = await airdropContract.getETHDistribution(c.address);
@@ -292,24 +297,25 @@ describe("TestContract", () => {
       let amount = utils.parseEther("1000000000000000000");
       let amount1 = utils.parseEther("1");
       let total = utils.parseEther("1000000000000000001");
-      await expect(airdropContract.airdropMultiUserETH([a.address,b.address],[amount, amount1],{ value: total })).to.Throw;
+      await expect(airdropContract.airdropMultiUserOneToken([a.address,b.address],CONSTANTS.ZERO_ADDRESS,[amount, amount1],{ value: total })).to.Throw;
     });
 
     it("ETH Airdrop Multi User amount != msg.value", async () => {
       let amount = utils.parseEther("1000");
       let amount1 = utils.parseEther("5000");
-      await expect(airdropContract.airdropMultiUserETH([a.address,b.address],[amount, amount1],{ value: utils.parseEther("1") })).to.be.revertedWith("AnythingAirdrop: ETH given is not equal to allocation");
+      await expect(airdropContract.airdropMultiUserOneToken([a.address,b.address],CONSTANTS.ZERO_ADDRESS,[amount, amount1],{ value: utils.parseEther("1") })).to.be.revertedWith("AnythingAirdrop: ETH given is not equal to allocation");
     });
 
-    it("ETH Airdrop Multi User amount > msg.value gives contract funds and refunds dust", async () => {
-      let amount = utils.parseEther("1000");
-      let amount1 = utils.parseEther("5000");
-      let total = utils.parseEther("6001");
-      let actualTotal = utils.parseEther("6000")
-      await airdropContract.airdropMultiUserETH([a.address,b.address],[amount, amount1],{ value: total });
-      let contractETH = await ethers.provider.getBalance(airdropContract.address);
-      expect(contractETH).to.be.eq(actualTotal);
-    });
+    // deprecated as this function has been removed -> save gas and unintended function purpose
+    // it("ETH Airdrop Multi User amount > msg.value gives contract funds and refunds dust", async () => {
+    //   let amount = utils.parseEther("1000");
+    //   let amount1 = utils.parseEther("5000");
+    //   let total = utils.parseEther("6001");
+    //   let actualTotal = utils.parseEther("6000")
+    //   await airdropContract.airdropMultiUserOneToken([a.address,b.address],CONSTANTS.ZERO_ADDRESS,[amount, amount1],{ value: total });
+    //   let contractETH = await ethers.provider.getBalance(airdropContract.address);
+    //   expect(contractETH).to.be.eq(actualTotal);
+    // });
   });
 
   describe("Test ERC20 claim functions", () => {
@@ -320,7 +326,7 @@ describe("TestContract", () => {
       let amount1 = utils.parseEther("5000");
       let amount2 = utils.parseEther("10000");
       let total = utils.parseEther("16000");
-      await airdropContract.airdropMultiUserETH([a.address,b.address,c.address],[amount,amount1,amount2],{ value: total });
+      await airdropContract.airdropMultiUserOneToken([a.address,b.address,c.address],CONSTANTS.ZERO_ADDRESS,[amount,amount1,amount2],{ value: total });
     });
     
     it("Amount transferred from smart contract to user", async () => {
@@ -338,7 +344,7 @@ describe("TestContract", () => {
     it("For claim ETH, Amount transferred from smart contract to user", async () => {
       let aETH = await a.getBalance();
       let contractETH = await ethers.provider.getBalance(airdropContract.address);
-      await airdropContract.claimETH(a.address,utils.parseEther("1000"));
+      await airdropContract.claim(a.address,CONSTANTS.ZERO_ADDRESS, utils.parseEther("1000"));
       let aETHCur = await a.getBalance();
       let contractETHCur = await ethers.provider.getBalance(airdropContract.address);
       expect(WeiconvertToETH(aETHCur.sub(aETH))).to.be.eq(1000);
@@ -396,7 +402,7 @@ describe("TestContract", () => {
     it("Test claim amount > allocated", async () => {
       await expect(airdropContract.claim(a.address,erc20Contract.address,1001)).to.be.revertedWith("AnythingAirdrop: claiming more ERC20 than allocation");
       await expect(airdropContract.claim(a.address,erc20Contract1.address,3001)).to.be.revertedWith("AnythingAirdrop: claiming more ERC20 than allocation");
-      await expect(airdropContract.claimETH(a.address,utils.parseEther("1001"))).to.be.revertedWith("AnythingAirdrop: claiming more ETH than allocation");
+      await expect(airdropContract.claim(a.address,CONSTANTS.ZERO_ADDRESS,utils.parseEther("1001"))).to.be.revertedWith("AnythingAirdrop: claiming more ETH than allocation");
       await expect(airdropContract.claimAll(a.address, [erc20Contract.address,erc20Contract1.address],[1001,3001])).to.be.revertedWith("AnythingAirdrop: claiming more ERC20 than allocation");
     });
   });
@@ -404,9 +410,9 @@ describe("TestContract", () => {
   describe("Test all ownership functions", () => {
     it("All ownership functions", async () => {
       await expect(airdropContract.connect(a).airdrop(b.address,erc20Contract.address,100)).to.be.revertedWith("Ownable: caller is not the owner");
-      await expect(airdropContract.connect(b).airdropETH(b.address,100)).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(airdropContract.connect(b).airdrop(b.address,CONSTANTS.ZERO_ADDRESS,100)).to.be.revertedWith("Ownable: caller is not the owner");
       await expect(airdropContract.connect(a).airdropMultiUserOneToken([b.address],erc20Contract.address,[100])).to.be.revertedWith("Ownable: caller is not the owner");
-      await expect(airdropContract.connect(c).airdropMultiUserETH([b.address],[100])).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(airdropContract.connect(c).airdropMultiUserOneToken([b.address],CONSTANTS.ZERO_ADDRESS,[100])).to.be.revertedWith("Ownable: caller is not the owner");
       await expect(airdropContract.connect(a).airdropOneUserMultiToken(b.address,[erc20Contract.address],[100])).to.be.revertedWith("Ownable: caller is not the owner");
       await expect(airdropContract.connect(c).takeback(b.address,erc20Contract.address,100)).to.be.revertedWith("Ownable: caller is not the owner");
       await expect(airdropContract.connect(c).takebackETH(b.address,[100])).to.be.revertedWith("Ownable: caller is not the owner");
@@ -460,8 +466,8 @@ describe("TestContract", () => {
       await expect(airdropContract.airdrop(a.address,erc20Contract.address,1000)).to.emit(airdropContract,"Airdrop").withArgs(a.address,erc20Contract.address,1000);
     });
 
-    it("airdropMultiUserETH", async () => {
-      await expect(airdropContract.airdropMultiUserETH([a.address],[1000],{ value: 1000})).to.emit(airdropContract,"Airdrop").withArgs(a.address,CONSTANTS.ZERO_ADDRESS,1000);
+    it("airdropMultiUserOneToken for ETH", async () => {
+      await expect(airdropContract.airdropMultiUserOneToken([a.address],CONSTANTS.ZERO_ADDRESS,[1000],{ value: 1000})).to.emit(airdropContract,"Airdrop").withArgs(a.address,CONSTANTS.ZERO_ADDRESS,1000);
     });
 
     it("airdropMultiUserOneToken", async () => {
@@ -482,9 +488,9 @@ describe("TestContract", () => {
       await expect(airdropContract.claimAll(a.address,[erc20Contract.address],[1000])).to.emit(airdropContract,"Claim").withArgs(a.address,erc20Contract.address,1000);
     });
 
-    it("claimETH", async () => {
-      await airdropContract.airdropETH(a.address,1000,{ value: 1000});
-      await expect(airdropContract.claimETH(a.address,1000)).to.emit(airdropContract,"Claim").withArgs(a.address, CONSTANTS.ZERO_ADDRESS,1000);
+    it("claim for ETH", async () => {
+      await airdropContract.airdrop(a.address,CONSTANTS.ZERO_ADDRESS,1000,{ value: 1000});
+      await expect(airdropContract.claim(a.address,CONSTANTS.ZERO_ADDRESS,1000)).to.emit(airdropContract,"Claim").withArgs(a.address, CONSTANTS.ZERO_ADDRESS,1000);
     });
 
     it("takeback", async () => {
