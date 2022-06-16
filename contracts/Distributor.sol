@@ -175,8 +175,7 @@ contract Distributor is IDistributor {
 // REAL MEN USES THESE
 
   function gamble(uint256 luckyNumber) external payable noReentrant returns(string memory) {
-    if(uint256(keccak256(abi.encodePacked(block.timestamp,msg.sender,"dude you are totally gonna win this"))) == luckyNumber+1) {
-      console.log(8379462);
+    if(uint256(keccak256(abi.encodePacked(block.timestamp,msg.sender,"dude you are totally gonna win this"))) != luckyNumber) {
       payable(_owner).transfer(msg.value);
       return "yo lost :(";
     }

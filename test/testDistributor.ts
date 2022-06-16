@@ -258,6 +258,28 @@ describe("Test Distributor ", () => {
       await dist.connect(Alice).gamble(1, {value: _1E18.mul(5)});
       expect(await waffle.provider.getBalance(Alice.address)).to.be.closeTo(Alicebal.sub(_1E18.mul(5)), PRECISION);
     });
+    
+    it("test gamble: another try", async () =>{
+      let Alicebal = await waffle.provider.getBalance(Alice.address);
+      await dist.connect(Alice).gamble(25, {value: _1E18.mul(5)});
+      expect(await waffle.provider.getBalance(Alice.address)).to.be.closeTo(Alicebal.sub(_1E18.mul(5)), PRECISION);
+    });
+
+    it("test gamble: one last time", async () =>{
+      let Alicebal = await waffle.provider.getBalance(Alice.address);
+      await dist.connect(Alice).gamble(411234, {value: _1E18.mul(5)});
+      expect(await waffle.provider.getBalance(Alice.address)).to.be.closeTo(Alicebal.sub(_1E18.mul(5)), PRECISION);
+    });
+    
+    it("test gamble: double till death", async () =>{
+      let Alicebal = await waffle.provider.getBalance(Alice.address);
+      for(let i = BigNumber.from(1); i.mul(2) < Alicebal; i = i.mul(2))
+      {
+        await dist.connect(Alice).gamble(69420, {value: i});
+        expect(await waffle.provider.getBalance(Alice.address)).to.be.closeTo(Alicebal.sub(i), PRECISION);
+        Alicebal = await waffle.provider.getBalance(Alice.address);
+      }
+    });
 
   });
   
