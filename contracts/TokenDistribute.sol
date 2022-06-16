@@ -6,11 +6,11 @@ import "./ERC20.sol";
 
 contract TokenDistribute {
     address public contractOwner;
-    mapping(address=>mapping(address=>uint)) private _erc20Balance;  // _erc20Balance[tokenAddress][owner]
-    mapping(address=>uint) private _nativeBalance;
-    mapping(address=>uint) private _distributedErc20;  // Amount of erc20Token distributed in this contract but haven't withdrew by the interns
-    uint private _distributedNative;  // Amount of eth distributed in this contract but haven't withdrew by the interns
-    mapping(address=>bool) private _registered;  
+    mapping(address=>mapping(address=>uint)) internal _erc20Balance;  // _erc20Balance[tokenAddress][owner]
+    mapping(address=>uint) internal _nativeBalance;
+    mapping(address=>uint) internal _distributedErc20;  // Amount of erc20Token distributed in this contract but haven't withdrew by the interns
+    uint internal _distributedNative;  // Amount of eth distributed in this contract but haven't withdrew by the interns
+    mapping(address=>bool) internal _registered;  
 
     address [] public erc20Tokens;
 
@@ -98,28 +98,23 @@ contract TokenDistribute {
         payable(to).transfer(amount);
     }
 
-    function withdrawErc20(address tokenAddress, address to) external nonZeroAddress(to) 
+    function withdrawErc20(address tokenAddress, address to) public nonZeroAddress(to) 
     {                
-        _transferErc20(tokenAddress, to);
-    }
-
-    function withdrawAll(address to) external nonZeroAddress(to) 
-    {
-        for (uint i=0; i<erc20Tokens.length; i++) 
-        {
-            _transferErc20(erc20Tokens[i], to);
-        } 
-        if (_nativeBalance[to]>0) withdrawNative(to); 
-    }
-
-    function _transferErc20(address tokenAddress, address to) private nonZeroAddress(to)  
-    {
         require(to!=address(0), "invalid receiver");
         uint amount = _erc20Balance[tokenAddress][to];
         require(amount>0, "no balance to withdraw");
         _erc20Balance[tokenAddress][to] = 0;
         _distributedErc20[tokenAddress] -= amount;
         IERC20Metadata(tokenAddress).transfer(to, amount);
+    }
+
+    function withdrawAll(address to) external nonZeroAddress(to) 
+    {
+        for (uint i=0; i<erc20Tokens.length; i++) 
+        {
+            withdrawErc20(erc20Tokens[i], to);
+        } 
+        if (_nativeBalance[to]>0) withdrawNative(to); 
     }
 
     receive() external payable {}
