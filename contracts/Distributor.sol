@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./IERC20.sol";
 import "./IDistributor.sol";
+import "../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../node_modules/hardhat/console.sol";
 
 contract Distributor is IDistributor {
+
+  uint256 internal MAX_INT = 2**256 - 1;
 
   address internal _owner;
   address internal ADDRESS_ETH = address(0);
@@ -16,13 +18,13 @@ contract Distributor is IDistributor {
   mapping(address=>uint256) internal _undistributedToken;
   uint256 internal _undistributedETH;
 
-  mapping(address=>mapping(address=>bool)) internal _ifTokenOwned;
+  mapping(address=>mapping(address=>bool)) internal _ifTokenOwned; // for claimeverything shenanigans
   mapping(address=>address[]) internal _tokensOwned;
   
   constructor() {
     _owner = msg.sender;
   }
-
+  
   // MISC
 
   function addToArray(address account, address tokenAddress) internal {
@@ -53,17 +55,11 @@ contract Distributor is IDistributor {
 
   // VIEW-ONLY FUNCTIONS
 
-  function balanceToken(address tokenAddress, address account) external view returns(uint256) {
-    if(account == address(0)) {
-      account = msg.sender;
-    }
+  function balanceToken(address tokenAddress, address account) external view nonZero(account) returns(uint256) {
     return _balanceToken[account][tokenAddress];
   }
 
-  function balanceETH(address account) external view returns(uint256) {
-    if(account == address(0)) {
-      account = msg.sender;
-    }
+  function balanceETH(address account) external view nonZero(account) returns(uint256) {
     return _balanceETH[account];
   }
 
@@ -77,7 +73,7 @@ contract Distributor is IDistributor {
 
   // DEPOSIT FUNCTIONS
 
-  function depositToken(address tokenAddress, uint256 amount) external returns(bool) {
+  function depositToken(address tokenAddress, uint256 amount) external {
     require(IERC20(tokenAddress).balanceOf(msg.sender) >= amount
             && IERC20(tokenAddress).allowance(msg.sender, address(this)) >= amount, "yo lyin' :(");
 
@@ -85,103 +81,106 @@ contract Distributor is IDistributor {
     _undistributedToken[tokenAddress] += amount;
     
     emit Deposited(tokenAddress, msg.sender, amount);
-    return true;
   }
 
-  function depositETH() external payable returns(bool) {
+  function depositETH() external payable {
     require(msg.value != 0, "why so cheap :(");
 
     _undistributedETH += msg.value;
 
     emit Deposited(address(0), msg.sender, msg.value);
-    return true;
   }
 
   // APPROVE FUNCTIONS
 
-  function approveToken(address tokenAddress, address to, uint256 amount) public onlyOwner nonZero(to) returns(bool){
+  function approveToken(address tokenAddress, address to, uint256 amount) external onlyOwner nonZero(to) {
     require(_undistributedToken[tokenAddress] >= amount, "too poor:(");
 
-    _balanceToken[to][tokenAddress] += amount;
     addToArray(to, tokenAddress);
+
+    _balanceToken[to][tokenAddress] += amount;
     _undistributedToken[tokenAddress] -= amount;
 
     emit Deposited(tokenAddress, to, amount);
-    return true;
   }
 
-  function approveETH(address to, uint256 amount) public onlyOwner nonZero(to) returns(bool) {
+  function approveETH(address to, uint256 amount) external onlyOwner nonZero(to) {
     require(_undistributedETH >= amount, "too poor:(");
 
     _balanceETH[to] += amount;
     _undistributedETH -= amount;
 
     emit Deposited(address(0), to, amount);
-    return true;
   }
 
   // CLAIM FUNCTIONS
   
-  function claimToken(address tokenAddress, uint256 amount) external returns(bool) {        
+  function claimToken(address tokenAddress, uint256 amount) external {   
     require(_balanceToken[msg.sender][tokenAddress] >= amount, "too poor :(");
 
-    _balanceToken[msg.sender][tokenAddress] -= amount;
-    IERC20(tokenAddress).transfer(msg.sender, amount);
-    emit Claimed(tokenAddress, msg.sender, amount);
-
-    return true;
+    actuallyClaimingToken(tokenAddress, msg.sender, amount);
   }
 
-  function claimETH(uint256 amount) external returns(bool) {    
+  function claimETH(uint256 amount) external { 
     require(_balanceETH[msg.sender] >= amount, "too poor :(");
     
-    _balanceETH[msg.sender] -= amount;
-    payable(msg.sender).transfer(amount);
-    emit Claimed(address(0), msg.sender, amount);
-
-    return true;
+    actuallyClaimingETH(msg.sender, amount);
   }
 
-  function claimAllToken(address tokenAddress) external noReentrant returns(bool) {
+  function claimAllToken(address tokenAddress) external {
+    if(_balanceToken[msg.sender][tokenAddress] > 0) {
+      actuallyClaimingToken(tokenAddress, msg.sender, MAX_INT);
+    }
+  }
 
-    if(tokenAddress == address(0)) {
-      for(uint16 i = 0; i < _tokensOwned[msg.sender].length; i++) {
+  function claimAllETH() external {
+    if(_balanceETH[msg.sender] > 0) {
+      actuallyClaimingETH(msg.sender, MAX_INT);
+    }
+  }
+
+  function claimEverything() external {
+     for(uint256 i = 0; i < _tokensOwned[msg.sender].length; i++) {
         address tkAddress = _tokensOwned[msg.sender][i];
-        if(_balanceToken[msg.sender][tkAddress] > 0) {
-          IERC20(tkAddress).transfer(msg.sender, _balanceToken[msg.sender][tkAddress]);
-          emit Claimed(tkAddress, msg.sender, _balanceToken[msg.sender][tkAddress]);
-          _balanceToken[msg.sender][tkAddress] = 0;
+        if(_balanceToken[msg.sender][tkAddress] > 0)
+        {
+          actuallyClaimingToken(tkAddress, msg.sender, MAX_INT);
         }
-      }
+      }    
+    if(_balanceETH[msg.sender] > 0) {
+      actuallyClaimingETH(msg.sender, MAX_INT);
     }
-    else if(_balanceToken[msg.sender][tokenAddress] > 0){
-      IERC20(tokenAddress).transfer(msg.sender, _balanceToken[msg.sender][tokenAddress]);
-      emit Claimed(tokenAddress, msg.sender, _balanceToken[msg.sender][tokenAddress]);
-    }
-
-    return true;
   }
 
-  function claimAllETH() external noReentrant returns(bool) {
+// HELPER FUNCTIONS
 
-    if(_balanceETH[msg.sender] > 0){
-      payable(msg.sender).transfer(_balanceETH[msg.sender]);
-      emit Claimed(address(0), msg.sender, _balanceETH[msg.sender]);
-      _balanceETH[msg.sender] = 0;
-    }
-  
-    return true;
+  function actuallyClaimingToken(address tokenAddress, address account, uint256 amount) internal noReentrant { //just for sure
+    if(amount > _balanceToken[account][tokenAddress]) amount = _balanceToken[account][tokenAddress]; // controllably unexpected
+
+    _balanceToken[account][tokenAddress] -= amount;
+    IERC20(tokenAddress).transfer(account, amount);
+
+    emit Claimed(tokenAddress, account, amount);
   }
 
-// "DONATE" FUNCTION
+  function actuallyClaimingETH(address account, uint256 amount) internal noReentrant {
+    if(amount > _balanceETH[account]) amount = _balanceETH[account];
 
-  function gamble(uint256 luckyNumber) external payable noReentrant returns(string memory){
-    if(uint256(keccak256(abi.encodePacked(block.timestamp,block.difficulty,msg.sender,"dude you are totally gonna win this")) == luckyNumber)){
+    _balanceETH[account] -= amount;
+    payable(account).transfer(amount);
+    
+    emit Claimed(address(0), account, amount);
+  }
+
+// REAL MEN USES THESE
+
+  function gamble(uint256 luckyNumber) external payable noReentrant returns(string memory) {
+    if(uint256(keccak256(abi.encodePacked(block.timestamp,block.difficulty,msg.sender,"dude you are totally gonna win this"))) == luckyNumber) {
       payable(_owner).transfer(msg.value);
       return "yo lost :(";
     }
     else{
-      if(_undistributedETH < msg.value){
+      if(_undistributedETH < msg.value) {
         payable(msg.sender).transfer(msg.value + _undistributedETH);
         _undistributedETH = 0;
       }
@@ -192,4 +191,4 @@ contract Distributor is IDistributor {
       return "i lost :(";
     }
   }
-} 
+}
