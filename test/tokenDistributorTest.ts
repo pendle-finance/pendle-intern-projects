@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { utils, BigNumber } from "ethers";
 import { ethers, waffle } from "hardhat";
 import { deploy, evm_revert, evm_snapshot } from "./helpers/hardhat-helpers";
+import { PRECISION } from "./helpers/Constants";
 import { TokenDistributor, ERC20 } from "../typechain";
 
 describe("TestContract", () => {
@@ -68,8 +69,7 @@ describe("TestContract", () => {
   });
 
   it('claim works', async () => {
-    let aliceETHBalance = await ethers.provider.getBalance(alice.address);
-    console.log("INITIAL: ", aliceETHBalance);
+    const initialAliceETHBalance = await ethers.provider.getBalance(alice.address);
 
     await erc20.mint(admin.address, 100000);
     await erc20.transfer(distributorContract.address, 40);
@@ -81,8 +81,9 @@ describe("TestContract", () => {
     const aliceERC20Balance = await erc20.balanceOf(alice.address);
     expect(aliceERC20Balance).to.be.eq(40);
 
-    aliceETHBalance = await ethers.provider.getBalance(alice.address);
-    console.log("AFTER: ", aliceETHBalance);
+    const finalAliceETHBalance = await ethers.provider.getBalance(alice.address);
+
+    expect(finalAliceETHBalance).to.be.closeTo(initialAliceETHBalance, PRECISION);
 
   })
 
