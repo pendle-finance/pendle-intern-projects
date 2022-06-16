@@ -123,9 +123,7 @@ contract Distributor is Context, Ownable {
     function distributeDemAllETH() external onlyOwner {
         uint totalPayees = numRegisteredForETH();
         for(uint256 i = 0; i < totalPayees;){
-            if(_sharesForETH[_payeesForETH[i]] > 0) {
-                payoutETH(payable(_payeesForETH[i]));
-            }
+            payoutETH(payable(_payeesForETH[i]));
             unchecked {i++; }
         }
     }
