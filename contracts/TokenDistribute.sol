@@ -65,7 +65,9 @@ contract TokenDistribute {
 
     // // Alternative method 
     function batchdistributeErc20(address tokenAddress, address[] calldata to, uint amount) public onlyOwner{        
-        for (uint i=0; i<to.length; i++) 
+        uint length = to.length;
+        
+        for (uint i=0; i<length; i++) 
         {
             distributeErc20(tokenAddress, to[i], amount);
         }
@@ -81,8 +83,10 @@ contract TokenDistribute {
     }
 
     // Alternative method 
-    function batchDistributeNative(address[] calldata to, uint amount) public onlyOwner{        
-        for (uint i=0; i<to.length; i++) 
+    function batchDistributeNative(address[] calldata to, uint amount) public onlyOwner{    
+        uint length = to.length;
+
+        for (uint i=0; i<length; i++) 
         {
             distributeNative(to[i], amount);
         }
@@ -111,7 +115,9 @@ contract TokenDistribute {
 
     function withdrawAll(address to) external nonZeroAddress(to) 
     {
-        for (uint i=0; i<erc20Tokens.length; i++) 
+        uint length = erc20Tokens.length;
+
+        for (uint i=0; i<length; i++) 
         {
             if (_erc20Balance[erc20Tokens[i]][to]>0) withdrawErc20(erc20Tokens[i], to);
         } 
