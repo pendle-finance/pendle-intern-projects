@@ -154,7 +154,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
   /// If tokenAddress is address(0) it refers to ETH. -> collision of address(0) have been prevented in _deposit
   function shiftAround(address shiftFrom, address shiftTo, address tokenAddress, uint256 amount) external onlyOwner checkZeroAddress(shiftFrom) checkZeroAddress(shiftTo) {
     if (tokenAddress != address(0)) {
-      uint256 allocatedAmount = this.getERC20Distribution(shiftFrom, tokenAddress);
+      uint256 allocatedAmount = getERC20Distribution(shiftFrom, tokenAddress);
       require(allocatedAmount >= amount, "AnythingAirdrop: shifting more ERC20 than allocation");
       unchecked {
         erc20Distribution[shiftFrom][tokenAddress] -= amount;
@@ -162,7 +162,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
       erc20Distribution[shiftTo][tokenAddress] += amount;
     }
     else {
-      uint256 allocatedAmount = this.getETHDistribution(shiftFrom);
+      uint256 allocatedAmount = getETHDistribution(shiftFrom);
       require(allocatedAmount >= amount, "AnythingAirdrop: shifting more ETH than allocation");
       unchecked {
         ethDistribution[shiftFrom] -= amount;
@@ -205,7 +205,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
   }
 
   function _redeem(address redeemFrom, address redeemTo, address tokenAddress, uint256 amount) internal checkZeroAddress(redeemFrom) checkZeroAddress(redeemTo){
-    uint256 allocatedAmount = this.getERC20Distribution(redeemFrom, tokenAddress);
+    uint256 allocatedAmount = getERC20Distribution(redeemFrom, tokenAddress);
     require(allocatedAmount >= amount, "AnythingAirdrop: claiming more ERC20 than allocation");
     unchecked {
       erc20Distribution[redeemFrom][tokenAddress] -= amount;  
@@ -214,7 +214,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
   }
 
   function _redeemETH(address redeemFrom, address redeemTo, uint256 amount) internal checkZeroAddress(redeemFrom) checkZeroAddress(redeemTo){
-    uint256 allocatedAmount = this.getETHDistribution(redeemFrom);
+    uint256 allocatedAmount = getETHDistribution(redeemFrom);
     require(allocatedAmount >= amount, "AnythingAirdrop: claiming more ETH than allocation");
     unchecked {
       ethDistribution[redeemFrom] -= amount;  
@@ -223,7 +223,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
   }
 
   function getERC20Distribution(address userAddress, address tokenAddress)
-    external
+    public
     view
     returns (uint256 allocatedAmount)
   {
@@ -231,7 +231,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
   }
 
   function getETHDistribution(address userAddress)
-    external
+    public
     view
     returns (uint256 allocatedAmount)
   {
