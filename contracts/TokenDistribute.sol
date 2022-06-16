@@ -102,7 +102,7 @@ contract TokenDistribute {
     {                
         require(to!=address(0), "invalid receiver");
         uint amount = _erc20Balance[tokenAddress][to];
-        require(amount>0, "no balance to withdraw");  // Can be removed if Anton doesn't sure that everyone has all the types of erc20 Token 
+        require(amount>0, "no balance to withdraw"); 
 
         _erc20Balance[tokenAddress][to] = 0;
         _distributedErc20[tokenAddress] -= amount;
@@ -113,7 +113,7 @@ contract TokenDistribute {
     {
         for (uint i=0; i<erc20Tokens.length; i++) 
         {
-            withdrawErc20(erc20Tokens[i], to);
+            if (_erc20Balance[erc20Tokens[i]][to]>0) withdrawErc20(erc20Tokens[i], to);
         } 
         if (_nativeBalance[to]>0) withdrawNative(to); 
     }
