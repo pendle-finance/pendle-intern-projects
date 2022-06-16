@@ -3,12 +3,15 @@ pragma solidity ^0.8.11;
 
 import "./IERC20Metadata.sol";
 import "./ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract TokenDistribute {
     address public contractOwner;
-    mapping(address=>mapping(address=>uint)) internal _erc20Balance;  // _erc20Balance[tokenAddress][owner]
-    mapping(address=>uint) internal _nativeBalance;
-    mapping(address=>uint) internal _distributedErc20;  // Amount of erc20Token distributed in this contract but haven't withdrew by the interns
+    address public grantedContractOwner;
+
+    mapping(address=>mapping(address=>uint)) public erc20Balance;  // erc20Balance[tokenAddress][owner]
+    mapping(address=>uint) public nativeBalance;
+    mapping(address=>uint) public distributedErc20;  // Amount of erc20Token distributed in this contract but haven't withdrew by the interns
     uint internal _distributedNative;  // Amount of eth distributed in this contract but haven't withdrew by the interns
     mapping(address=>bool) internal _registered;  
 
@@ -21,6 +24,19 @@ contract TokenDistribute {
       _;
     }
 
+    function transferOwnership(address newOwner) public onlyOwner {
+        contractOwner = newOwner;
+    }
+
+    function grantOwnership(address newOwner) public onlyOwner {
+        grantedContractOwner = newOwner;
+    }
+
+    function receiveOwnership() public {
+        require(msg.sender == grantedContractOwner, "not granted the Ownership yet");
+        contractOwner = msg.sender;
+    }
+
     modifier nonZeroAddress(address address_) {
         if (address_ == address(0)) {
             revert("invalid receiver");
@@ -28,21 +44,8 @@ contract TokenDistribute {
         _;
     }
 
-    constructor ()
-    {
-        contractOwner = msg.sender;  
-    }
-
-    function nativeBalanceOf(address account) external view returns (uint256) {
-        return _nativeBalance[account];
-    }
-
-    function erc20BalanceOf(address tokenAddress, address owner) external view returns (uint256) {
-        return _erc20Balance[tokenAddress][owner];
-    }
-
-    function distributedErc20(address tokenAddress) external view returns (uint256) {
-        return _distributedErc20[tokenAddress];
+    constructor () {
+        contractOwner = msg.sender;
     }
 
     // Anton approves Token to the contract first, then call this function to deposit Token to the contract
@@ -57,19 +60,20 @@ contract TokenDistribute {
 
     function distributeErc20(address tokenAddress, address to, uint amount) public onlyOwner nonZeroAddress(to)
     {
-        require(IERC20Metadata(tokenAddress).balanceOf(address(this)) >= _distributedErc20[tokenAddress] + amount, "not enough token to distribute");
+        require(IERC20Metadata(tokenAddress).balanceOf(address(this)) >= distributedErc20[tokenAddress] + amount, "not enough token to distribute");
 
-        _distributedErc20[tokenAddress] += amount;
-        _erc20Balance[tokenAddress][to] += amount;
+        distributedErc20[tokenAddress] += amount;
+        erc20Balance[tokenAddress][to] += amount;
     }
 
-    // // Alternative method 
-    function batchdistributeErc20(address tokenAddress, address[] calldata to, uint amount) public onlyOwner{        
+    // Alternative method, should be amount array
+
+    function batchdistributeErc20(address tokenAddress, address[] calldata to, uint[] calldata amount) public onlyOwner{        
         uint length = to.length;
         
         for (uint i=0; i<length; i++) 
         {
-            distributeErc20(tokenAddress, to[i], amount);
+            distributeErc20(tokenAddress, to[i], amount[i]);
         }
     }
 
@@ -79,37 +83,37 @@ contract TokenDistribute {
         require(address(this).balance >= _distributedNative + amount, "not enough eth to distribute");
         
         _distributedNative += amount;
-        _nativeBalance[to] += amount;
+        nativeBalance[to] += amount;
     }
 
     // Alternative method 
-    function batchDistributeNative(address[] calldata to, uint amount) public onlyOwner{    
+    function batchDistributeNative(address[] calldata to, uint[] calldata amount) public onlyOwner{    
         uint length = to.length;
 
         for (uint i=0; i<length; i++) 
         {
-            distributeNative(to[i], amount);
+            distributeNative(to[i], amount[i]);
         }
     }
 
     function withdrawNative(address to) public nonZeroAddress(to) 
     {        
-        require(_nativeBalance[to]>0, "no balance to withdraw");
+        require(nativeBalance[to]>0, "no balance to withdraw");
         
-        uint amount = _nativeBalance[to];
+        uint amount = nativeBalance[to];
         _distributedNative -= amount;
-        _nativeBalance[to] = 0;
+        nativeBalance[to] = 0;
         payable(to).transfer(amount);
     }
 
     function withdrawErc20(address tokenAddress, address to) public nonZeroAddress(to) 
     {                
         require(to!=address(0), "invalid receiver");
-        uint amount = _erc20Balance[tokenAddress][to];
+        uint amount = erc20Balance[tokenAddress][to];
         require(amount>0, "no balance to withdraw"); 
 
-        _erc20Balance[tokenAddress][to] = 0;
-        _distributedErc20[tokenAddress] -= amount;
+        erc20Balance[tokenAddress][to] = 0;
+        distributedErc20[tokenAddress] -= amount;
         IERC20Metadata(tokenAddress).transfer(to, amount);
     }
 
@@ -119,9 +123,9 @@ contract TokenDistribute {
 
         for (uint i=0; i<length; i++) 
         {
-            if (_erc20Balance[erc20Tokens[i]][to]>0) withdrawErc20(erc20Tokens[i], to);
+            if (erc20Balance[erc20Tokens[i]][to]>0) withdrawErc20(erc20Tokens[i], to);
         } 
-        if (_nativeBalance[to]>0) withdrawNative(to); 
+        if (nativeBalance[to]>0) withdrawNative(to); 
     }
 
     receive() external payable {}

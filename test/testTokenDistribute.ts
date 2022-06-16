@@ -64,17 +64,17 @@ describe("TestTokenDistribute", () => {
     await expect(tokenDistribute.distributeErc20(erc20A.address, constants.AddressZero, AliceAmount)).to.be.revertedWith("invalid receiver");
 
     await tokenDistribute.distributeErc20(erc20A.address, Alice.address, AliceAmount);
-    expect(await tokenDistribute.erc20BalanceOf(erc20A.address, Alice.address)).to.be.eq(AliceAmount);
+    expect(await tokenDistribute.erc20Balance(erc20A.address, Alice.address)).to.be.eq(AliceAmount);
     expect(await tokenDistribute.distributedErc20(erc20A.address)).to.be.eq(AliceAmount);
 
     await expect(tokenDistribute.distributeErc20(erc20A.address, Bob.address, BobAmount+1)).to.be.revertedWith("not enough token to distribute");
     await tokenDistribute.distributeErc20(erc20A.address, Bob.address, BobAmount);
-    expect(await tokenDistribute.erc20BalanceOf(erc20A.address, Bob.address)).to.be.eq(BobAmount);
+    expect(await tokenDistribute.erc20Balance(erc20A.address, Bob.address)).to.be.eq(BobAmount);
     expect(await tokenDistribute.distributedErc20(erc20A.address)).to.be.eq(AliceAmount+BobAmount);
 
     await tokenDistribute.withdrawErc20(erc20A.address, Alice.address);
     expect(await erc20A.balanceOf(Alice.address)).to.be.eq(AliceAmount);
-    expect(await tokenDistribute.erc20BalanceOf(erc20A.address, Alice.address)).to.be.eq(0);
+    expect(await tokenDistribute.erc20Balance(erc20A.address, Alice.address)).to.be.eq(0);
     expect(await tokenDistribute.distributedErc20(erc20A.address)).to.be.eq(BobAmount);
   });
 
@@ -83,10 +83,10 @@ describe("TestTokenDistribute", () => {
     await erc20A.approve(tokenDistribute.address, totalAmount);
     await tokenDistribute.depositErc20(erc20A.address, totalAmount);
 
-    await tokenDistribute.batchdistributeErc20(erc20A.address, [Alice.address, Bob.address], totalAmount/2);
+    await tokenDistribute.batchdistributeErc20(erc20A.address, [Alice.address, Bob.address], [totalAmount/2, totalAmount/2]);
 
-    expect(await tokenDistribute.erc20BalanceOf(erc20A.address, Alice.address)).to.be.eq(totalAmount/2);
-    expect(await tokenDistribute.erc20BalanceOf(erc20A.address, Bob.address)).to.be.eq(totalAmount/2);
+    expect(await tokenDistribute.erc20Balance(erc20A.address, Alice.address)).to.be.eq(totalAmount/2);
+    expect(await tokenDistribute.erc20Balance(erc20A.address, Bob.address)).to.be.eq(totalAmount/2);
   });
 
   it("Anton transfers ETH to the contract and distribute to the intern successfully", async () => {
@@ -99,10 +99,10 @@ describe("TestTokenDistribute", () => {
     await expect(tokenDistribute.distributeNative(Alice.address, amount+1)).to.be.revertedWith("not enough eth to distribute");
     
     await tokenDistribute.distributeNative(Alice.address, amount);
-    expect(await tokenDistribute.nativeBalanceOf(Alice.address)).to.be.eq(amount); 
+    expect(await tokenDistribute.nativeBalance(Alice.address)).to.be.eq(amount); 
 
     await expect(await tokenDistribute.withdrawNative(Alice.address)).to.changeEtherBalance(Alice, amount);
-    expect(await tokenDistribute.nativeBalanceOf(Alice.address)).to.be.eq(0);
+    expect(await tokenDistribute.nativeBalance(Alice.address)).to.be.eq(0);
   });
 
   it("Anton transfers ETH to the contract and batch distribute to Alice and Bob successfully", async () => {
@@ -110,12 +110,12 @@ describe("TestTokenDistribute", () => {
 
     await admin.sendTransaction({to: tokenDistribute.address, value: amount});
 
-    await expect(tokenDistribute.batchDistributeNative([Alice.address, Bob.address], amount/2+1)).to.be.revertedWith("not enough eth to distribute");
+    await expect(tokenDistribute.batchDistributeNative([Alice.address, Bob.address], [amount/2+1, amount/2])).to.be.revertedWith("not enough eth to distribute");
     
-    await tokenDistribute.batchDistributeNative([Alice.address, Bob.address], amount/2);
+    await tokenDistribute.batchDistributeNative([Alice.address, Bob.address], [amount/2, amount/2]);
 
-    expect(await tokenDistribute.nativeBalanceOf(Alice.address)).to.be.eq(amount/2); 
-    expect(await tokenDistribute.nativeBalanceOf(Bob.address)).to.be.eq(amount/2);
+    expect(await tokenDistribute.nativeBalance(Alice.address)).to.be.eq(amount/2); 
+    expect(await tokenDistribute.nativeBalance(Bob.address)).to.be.eq(amount/2);
   });
 
   it("Anton approves erc20A and erc20B to the contract and distribute to interns successfully", async () => {
@@ -154,5 +154,14 @@ describe("TestTokenDistribute", () => {
     const gasSpent = receipt.gasUsed.mul(receipt.effectiveGasPrice);
 
     expect(await hre.ethers.provider.getBalance(Alice.address)).to.be.eq(prevBalance.add(amount).sub(gasSpent)); // to get balance of the address 
+  });
+
+  it("Transfer Ownership successfully", async () => {
+    await tokenDistribute.transferOwnership(Alice.address);
+    expect(await tokenDistribute.contractOwner()).to.be.eq(Alice.address);
+
+    await tokenDistribute.connect(Alice).grantOwnership(Bob.address);
+    await tokenDistribute.connect(Bob).receiveOwnership();
+    expect(await tokenDistribute.contractOwner()).to.be.eq(Bob.address);
   });
 });
