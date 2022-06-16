@@ -34,6 +34,21 @@ contract Distributor is Context, Ownable {
     // Amount of Token specified paid out to the account
     mapping(IERC20 => mapping(address => uint256)) private _distributedTokens; // IERC20 token -> account -> distributed Tokens
 
+
+         /*///////////////////////////////////////////////////////////////
+                            Modifiers
+    //////////////////////////////////////////////////////////////*/
+
+    modifier nonZeroAddress(address account_) {
+        require(account_ != address(0), "Distributor: Null address not allowed.");
+        _;
+    }
+
+    modifier validShares(uint256 shares_) {
+         require(shares_ > 0, "Distributor: Invalid shares specified.");
+         _;
+    }
+
         /*///////////////////////////////////////////////////////////////
                             Events
     //////////////////////////////////////////////////////////////*/
@@ -82,8 +97,7 @@ contract Distributor is Context, Ownable {
         
         _totalETHDistributed += ethClaimable;
         _distributedETH[account] = ethClaimable;
-        (bool success,) = account.call{value: ethClaimable}("");
-        require(success, "Distributor: Unable to receive ETH from contract.");
+        account.transfer(ethClaimable);
 
         emit ETHFundClaimed(account, ethClaimable);
     }
@@ -132,11 +146,10 @@ contract Distributor is Context, Ownable {
 
     // @Desc: To register accounts as payees for token distribution.
     // @Note: tokenAddress_ to specify as Null Address to register a payee with shares for Ether.
-    function _registerPayeesForETH(address account_, uint256 share_) private {
+    function _registerPayeesForETH(address account_, uint256 share_) private nonZeroAddress(account_) validShares(share_) {
         address account = account_;
         uint share = share_;
-        require(account != address(0), "Distributor: Null address not allowed.");
-        require(share > 0, "Distributor: Invalid shares specified.");
+
         require(_sharesForETH[account_] == 0, "Distributor: Account registered for ETH distribution.");
 
         // Save account as a payee in the mapping
@@ -147,13 +160,11 @@ contract Distributor is Context, Ownable {
         emit RegisterPayeeForETH(account, share);
     }
 
-    function _registerPayeesForTokens(address account_, IERC20 token_, uint256 share_) private {
+    function _registerPayeesForTokens(address account_, IERC20 token_, uint256 share_) private nonZeroAddress(account_) validShares(share_) {
         address account = account_;
         uint256 share = share_;
         IERC20 token = token_;
 
-        require(account != address(0), "Distributor: Null address not allowed.");
-        require(share > 0, "Distributor: Invalid shares specified.");
         require(_sharesForTokens[token][account] == 0, "Distributor: Account already registered for token distribution,");
 
         _payeesForToken[token][_numRegisteredForToken[token]] = account;
