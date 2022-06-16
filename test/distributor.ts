@@ -21,7 +21,7 @@ describe("Fund Distributor", () => {
 
     // Deploy respective contracts:
     TestERC20Contract = await deploy<TestERC20>("TestERC20",[]);
-    DistributorContract = await deploy<Distributor>("Distributor", [[alice.address, bob.address, charlie.address],[BigNumber.from(20),BigNumber.from(30),BigNumber.from(50)]] );
+    DistributorContract = await deploy<Distributor>("Distributor", [] );
 
     testERC20Address = TestERC20Contract.address;
     distributorAddress = DistributorContract.address;
@@ -34,6 +34,8 @@ describe("Fund Distributor", () => {
       value: ethers.utils.parseEther('10.0')
     })
 
+    await DistributorContract.registerPayeesForETH([alice.address, bob.address, charlie.address],[BigNumber.from(20),BigNumber.from(30),BigNumber.from(50)])
+
     snapshotId = await evm_snapshot();
   });
 
@@ -43,6 +45,7 @@ describe("Fund Distributor", () => {
   }
 
   beforeEach(async () => {
+    
     await revertSnapshot();
   });
 
@@ -64,11 +67,6 @@ describe("Fund Distributor", () => {
   })
 
   describe("ETH Initial Shares & Distribution Status", () => {
-
-    it("should HAVE 3 payees registered for ETH distribution", async () => {
-      let numEthPayees = await DistributorContract.numRegisteredForETH();
-      expect(numEthPayees).to.be.eq(BigNumber.from(3));
-    });
   
     it("should HAVE the respective shares (20,30,50) for the 3 initially resgistered accounts (alice, bob, charlie)", async () => {
       let aliceShare = await DistributorContract.sharesForETH(alice.address);
@@ -129,25 +127,25 @@ describe("Fund Distributor", () => {
       expect(aliceEthEntitlement).to.be.eq(aliceCurEthBalance.sub(aliceInitialEthBalance))
     });
 
-    it("should ALLOW owner to distribute all ETH entitlements via 'distributeDemAllETH' function", async () => {
-    let aliceInitialEthBalance = await ethers.provider.getBalance(alice.address);
-    let bobInitialEthBalance = await ethers.provider.getBalance(bob.address);
-    let charlieInitialEthBalance = await ethers.provider.getBalance(charlie.address);
+  //   it("should ALLOW owner to distribute all ETH entitlements via 'distributeDemAllETH' function", async () => {
+  //   let aliceInitialEthBalance = await ethers.provider.getBalance(alice.address);
+  //   let bobInitialEthBalance = await ethers.provider.getBalance(bob.address);
+  //   let charlieInitialEthBalance = await ethers.provider.getBalance(charlie.address);
 
-    let aliceEthEntitlement = await DistributorContract.claimableETH(alice.address);
-    let bobEthEntitlement = await DistributorContract.claimableETH(bob.address);
-    let charlieEthEntitlement = await DistributorContract.claimableETH(charlie.address);
+  //   let aliceEthEntitlement = await DistributorContract.claimableETH(alice.address);
+  //   let bobEthEntitlement = await DistributorContract.claimableETH(bob.address);
+  //   let charlieEthEntitlement = await DistributorContract.claimableETH(charlie.address);
 
-    await DistributorContract.distributeDemAllETH();
+  //   await DistributorContract.distributeDemAllETH();
 
-    let aliceCurEthBalance = await ethers.provider.getBalance(alice.address);
-    let bobCurEthBalance = await ethers.provider.getBalance(bob.address);
-    let charlieCurEthBalance = await ethers.provider.getBalance(charlie.address);
+  //   let aliceCurEthBalance = await ethers.provider.getBalance(alice.address);
+  //   let bobCurEthBalance = await ethers.provider.getBalance(bob.address);
+  //   let charlieCurEthBalance = await ethers.provider.getBalance(charlie.address);
 
-    expect(aliceEthEntitlement).to.be.eq(aliceCurEthBalance.sub(aliceInitialEthBalance))
-    expect(bobEthEntitlement).to.be.eq(bobCurEthBalance.sub(bobInitialEthBalance))
-    expect(charlieEthEntitlement).to.be.eq(charlieCurEthBalance.sub(charlieInitialEthBalance))
-  })
+  //   expect(aliceEthEntitlement).to.be.eq(aliceCurEthBalance.sub(aliceInitialEthBalance))
+  //   expect(bobEthEntitlement).to.be.eq(bobCurEthBalance.sub(bobInitialEthBalance))
+  //   expect(charlieEthEntitlement).to.be.eq(charlieCurEthBalance.sub(charlieInitialEthBalance))
+  // })
 
   it("should UPDATE claimable ETH to ZERO once a claim has been made to a registered payee", async () => {
     let contractETHBalance = ethers.utils.parseEther('10.0');
@@ -185,6 +183,37 @@ describe("Fund Distributor", () => {
     expect(newCharlieEthEntitlement).to.be.eq(newEthTopUpValue.mul(charlieShare).div(totalETHShares));
   })
 })
+
+describe("Amendments to ETH Distribution Shares", () => {
+
+  it("should AMEND the shares for a registered payee by owner of Distributor Contract", async () => {
+    let aliceShare = await DistributorContract.sharesForETH(alice.address);
+    expect(aliceShare).to.be.eq(BigNumber.from(20));
+
+    await expect(DistributorContract.amendPayeeETHShares(alice.address, ZERO)).to.emit(DistributorContract, "AmendETHShares").withArgs(alice.address, ZERO);
+  })
+
+  it("should UPDATE total ETH Shares when amendment is made to the shares for a registered payee by owner of Distributor Contract", async () => {
+    let aliceShare = await DistributorContract.sharesForETH(alice.address);
+    expect(aliceShare).to.be.eq(BigNumber.from(20));
+
+    await expect(DistributorContract.amendPayeeETHShares(alice.address, ZERO)).to.emit(DistributorContract, "AmendETHShares").withArgs(alice.address, ZERO);
+
+    let curTotalETHShares = await DistributorContract.totalETHShares();
+    expect(curTotalETHShares).to.be.eq(BigNumber.from(80));
+  })
+
+  
+  it("should REVERT when amendment is made to the shares for a registered payee by a non-owner of Distributor Contract", async () => {
+    let aliceShare = await DistributorContract.sharesForETH(alice.address);
+    expect(aliceShare).to.be.eq(BigNumber.from(20));
+
+    await expect(DistributorContract.connect(bob).amendPayeeETHShares(alice.address, ZERO)).to.be.revertedWith("Ownable: caller is not the owner");
+
+    let curTotalETHShares = await DistributorContract.totalETHShares();
+    expect(curTotalETHShares).to.be.eq(BigNumber.from(100));
+  })
+})
   
 
 describe("ERC20 (MOCK) Token Registration, Initial Shares & Distribution Status", () => {
@@ -194,19 +223,16 @@ describe("ERC20 (MOCK) Token Registration, Initial Shares & Distribution Status"
 
   })
 
-  it("should HAVE 3 payees registered for TestERC20 distribution", async () => {
-    let numTokenPayees = await DistributorContract.numRegisteredForToken(testERC20Address);
-    expect(numTokenPayees).to.be.eq(BigNumber.from(3));
-  });
+
 
   it("should HAVE the respective shares (20,30,50) for the 3 initially resgistered accounts (alice, bob, charlie) under TestERC20 Token", async () => {
-    let aliceShare = await DistributorContract.sharesForTokens( alice.address, testERC20Address);
+    let aliceShare = await DistributorContract.sharesForTokens(  testERC20Address,alice.address);
     expect(aliceShare).to.be.eq(BigNumber.from(20));
 
-    let bobShare = await DistributorContract.sharesForTokens(bob.address,  testERC20Address);
+    let bobShare = await DistributorContract.sharesForTokens(testERC20Address, bob.address);
     expect(bobShare).to.be.eq(BigNumber.from(30));
 
-    let charlieShare = await DistributorContract.sharesForTokens(charlie.address,  testERC20Address);
+    let charlieShare = await DistributorContract.sharesForTokens( testERC20Address, charlie.address);
     expect(charlieShare).to.be.eq(BigNumber.from(50));
   });
 
@@ -224,18 +250,54 @@ describe("ERC20 (MOCK) Token Registration, Initial Shares & Distribution Status"
 
     let totalTokenShares = await DistributorContract.totalTokenShares(testERC20Address);
 
-    let aliceShare = await DistributorContract.sharesForTokens( alice.address, testERC20Address);
+    let aliceShare = await DistributorContract.sharesForTokens(  testERC20Address, alice.address);
     let aliceTokenEntitlement = await DistributorContract.claimableToken(alice.address,  testERC20Address);
     expect(aliceTokenEntitlement).to.be.eq(BigNumber.from(contractTokenBalance).mul(aliceShare).div(totalTokenShares));
 
-    let bobShare = await DistributorContract.sharesForTokens( bob.address, testERC20Address);
+    let bobShare = await DistributorContract.sharesForTokens(  testERC20Address, bob.address);
     let bobEthEntitlement = await DistributorContract.claimableToken(bob.address,  testERC20Address);
     expect(bobEthEntitlement).to.be.eq(BigNumber.from(contractTokenBalance).mul(bobShare).div(totalTokenShares));
 
-    let charlieShare = await DistributorContract.sharesForTokens(charlie.address, testERC20Address);
+    let charlieShare = await DistributorContract.sharesForTokens( testERC20Address, charlie.address);
     let charlieEthEntitlement = await DistributorContract.claimableToken(charlie.address, testERC20Address);
     expect(charlieEthEntitlement).to.be.eq(BigNumber.from(contractTokenBalance).mul(charlieShare).div(totalTokenShares));
   });
+})
+
+describe("Amendments to ETH Distribution Shares", () => {
+
+  beforeEach(async () => {
+    await DistributorContract.registerPayeesForToken([alice.address, bob.address, charlie.address],testERC20Address, [BigNumber.from(20), BigNumber.from(30), BigNumber.from(50)] );
+
+  })
+
+  it("should AMEND the ERC20 Token shares for a registered payee by owner of Distributor Contract", async () => {
+    let aliceShare = await DistributorContract.sharesForTokens( testERC20Address,alice.address);
+    expect(aliceShare).to.be.eq(BigNumber.from(20));
+
+    await expect(DistributorContract.amendPayeeTokenShares(alice.address, testERC20Address, ZERO)).to.emit(DistributorContract, "AmendTokenShares").withArgs(alice.address, testERC20Address, ZERO);
+  })
+
+  it("should UPDATE total ERC20 Token Shares when amendment is made to the shares for a registered payee by owner of Distributor Contract", async () => {
+    let aliceShare = await DistributorContract.sharesForTokens(testERC20Address,alice.address);
+    expect(aliceShare).to.be.eq(BigNumber.from(20));
+
+    await expect(DistributorContract.amendPayeeTokenShares(alice.address, testERC20Address, ZERO)).to.emit(DistributorContract, "AmendTokenShares").withArgs(alice.address, testERC20Address, ZERO);
+
+    let curTotalTokenShares = await DistributorContract.totalTokenShares(testERC20Address);
+    expect(curTotalTokenShares).to.be.eq(BigNumber.from(80));
+  })
+
+  
+  it("should REVERT when amendment is made to the shares for a registered payee by a non-owner of Distributor Contract", async () => {
+    let aliceShare = await DistributorContract.sharesForTokens(testERC20Address,alice.address);
+    expect(aliceShare).to.be.eq(BigNumber.from(20));
+
+    await expect(DistributorContract.connect(bob).amendPayeeTokenShares(alice.address, testERC20Address, ZERO)).to.be.revertedWith("Ownable: caller is not the owner");
+
+    let curTotalTokenShares = await DistributorContract.totalTokenShares(testERC20Address);
+    expect(curTotalTokenShares).to.be.eq(BigNumber.from(100));
+  })
 })
 
 
@@ -286,29 +348,29 @@ describe("TestERC20 Distribution Test Cases", () => {
     expect(aliceTokenEntitlement).to.be.eq(aliceCurTokenBalance.sub(aliceInitialTokenBalance))
   });
 
-  it("should ALLOW owner to distribute all ERC20 Token entitlements via 'distributeDemAllTokens' function", async () => {
+//   it("should ALLOW owner to distribute all ERC20 Token entitlements via 'distributeDemAllTokens' function", async () => {
 
 
-  let aliceTokenEntitlement =await DistributorContract.claimableToken(alice.address, testERC20Address);
-  let bobTokenEntitlement = await DistributorContract.claimableToken(bob.address, testERC20Address);
-  let charlieTokenEntitlement =await DistributorContract.claimableToken(charlie.address, testERC20Address);
+//   let aliceTokenEntitlement =await DistributorContract.claimableToken(alice.address, testERC20Address);
+//   let bobTokenEntitlement = await DistributorContract.claimableToken(bob.address, testERC20Address);
+//   let charlieTokenEntitlement =await DistributorContract.claimableToken(charlie.address, testERC20Address);
 
-  await DistributorContract.distributeDemAllToken(testERC20Address);
+//   await DistributorContract.distributeDemAllToken(testERC20Address);
 
-  let aliceCurTokenBalance = await TestERC20Contract.balanceOf(alice.address);
-  let bobCurTokenBalance = await TestERC20Contract.balanceOf(bob.address);
-  let charlieCurTokenBalance = await TestERC20Contract.balanceOf(charlie.address);
+//   let aliceCurTokenBalance = await TestERC20Contract.balanceOf(alice.address);
+//   let bobCurTokenBalance = await TestERC20Contract.balanceOf(bob.address);
+//   let charlieCurTokenBalance = await TestERC20Contract.balanceOf(charlie.address);
 
-  expect(aliceTokenEntitlement).to.be.eq(aliceCurTokenBalance.sub(aliceInitialTokenBalance))
-  expect(bobTokenEntitlement).to.be.eq(bobCurTokenBalance.sub(bobInitialTokenBalance))
-  expect(charlieTokenEntitlement).to.be.eq(charlieCurTokenBalance.sub(charlieInitialTokenBalance))
-})
+//   expect(aliceTokenEntitlement).to.be.eq(aliceCurTokenBalance.sub(aliceInitialTokenBalance))
+//   expect(bobTokenEntitlement).to.be.eq(bobCurTokenBalance.sub(bobInitialTokenBalance))
+//   expect(charlieTokenEntitlement).to.be.eq(charlieCurTokenBalance.sub(charlieInitialTokenBalance))
+// })
 
 it("should UPDATE claimable Token to ZERO once a claim has been made to a registered payee", async () => {
   let contractTokenBalance = await TestERC20Contract.balanceOf(distributorAddress)
   let totalTokenShares = await DistributorContract.totalTokenShares(testERC20Address);
 
-  let charlieShare = await DistributorContract.sharesForTokens(charlie.address, testERC20Address);
+  let charlieShare = await DistributorContract.sharesForTokens( testERC20Address, charlie.address);
   let charlieTokenEntitlement = await DistributorContract.claimableToken(charlie.address, testERC20Address);
 
   expect(charlieTokenEntitlement).to.be.eq(contractTokenBalance.mul(charlieShare).div(totalTokenShares))
@@ -321,7 +383,7 @@ it("should UPDATE claimable Token to ZERO once a claim has been made to a regist
 it("should UPDATE claimable ERC20 Token to a registered payee once a claim has been made & contract subsequently received more ERC20 Token ", async () => {
   let contractTokenBalance = await TestERC20Contract.balanceOf(distributorAddress)
 
-  let charlieShare = await DistributorContract.sharesForTokens(charlie.address, testERC20Address);
+  let charlieShare = await DistributorContract.sharesForTokens( testERC20Address, charlie.address);
   let charlieTokenEntitlement = await DistributorContract.claimableToken(charlie.address, testERC20Address);
 
   expect(charlieTokenEntitlement).to.be.eq(contractTokenBalance.mul(charlieShare).div(totalTokenShares))
@@ -338,6 +400,5 @@ it("should UPDATE claimable ERC20 Token to a registered payee once a claim has b
   expect(newCharlieTokenEntitlement).to.be.eq(newTESTTopUpValue.mul(charlieShare).div(totalTokenShares));
 })
 })
-
 
 });
