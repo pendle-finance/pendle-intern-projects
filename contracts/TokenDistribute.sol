@@ -9,6 +9,7 @@ contract TokenDistribute {
     mapping(address=>mapping(address=>uint)) private _erc20Balance;  // _erc20Balance[tokenAddress][owner]
     mapping(address=>uint) private _nativeBalance;
     mapping(address=>uint) private _distributedErc20;  // Amount of erc20Token distributed in this contract but haven't withdrew by the interns
+    uint private _distributedNative;  // Amount of eth distributed in this contract but haven't withdrew by the interns
     mapping(address=>bool) private _registered;  
 
     address [] public erc20Tokens;
@@ -54,7 +55,6 @@ contract TokenDistribute {
         }
     }
 
-    // Distribute 
     function distributeErc20(address tokenAddress, address to, uint amount) public onlyOwner nonZeroAddress(to)
     {
         require(IERC20Metadata(tokenAddress).balanceOf(address(this)) >= _distributedErc20[tokenAddress] + amount, "not enough token to distribute");
@@ -63,19 +63,37 @@ contract TokenDistribute {
         _erc20Balance[tokenAddress][to] += amount;
     }
 
-    // Anton transfers ETH directly to interns by calling this function with the amount of ETH
-    function transferNative(address to) public onlyOwner nonZeroAddress(to) payable
-    {
-        require(msg.value>0, "transfer amount = 0");
-
-        _nativeBalance[to] += msg.value;
+    // // Alternative method 
+    function batchdistributeErc20(address tokenAddress, address[] calldata to, uint amount) public onlyOwner{        
+        for (uint i=0; i<to.length; i++) 
+        {
+            distributeErc20(tokenAddress, to[i], amount);
+        }
     }
 
-    function withdrawNative(address to) nonZeroAddress(to) public
+    // Anton transfers ETH directly to the contract first
+    function distributeNative(address to, uint amount) public onlyOwner nonZeroAddress(to)
+    {
+        require(address(this).balance >= _distributedNative + amount, "not enough eth to distribute");
+        
+        _distributedNative += amount;
+        _nativeBalance[to] += amount;
+    }
+
+    // Alternative method 
+    function batchDistributeNative(address[] calldata to, uint amount) public onlyOwner{        
+        for (uint i=0; i<to.length; i++) 
+        {
+            distributeNative(to[i], amount);
+        }
+    }
+
+    function withdrawNative(address to) public nonZeroAddress(to) 
     {        
         require(_nativeBalance[to]>0, "no balance to withdraw");
         
         uint amount = _nativeBalance[to];
+        _distributedNative -= amount;
         _nativeBalance[to] = 0;
         payable(to).transfer(amount);
     }
@@ -91,7 +109,7 @@ contract TokenDistribute {
         {
             _transferErc20(erc20Tokens[i], to);
         } 
-        if (_nativeBalance[to]>0) withdrawNative(to);  // As suggested, this function should withdraw ETH as well
+        if (_nativeBalance[to]>0) withdrawNative(to); 
     }
 
     function _transferErc20(address tokenAddress, address to) private nonZeroAddress(to)  
@@ -104,8 +122,5 @@ contract TokenDistribute {
         IERC20Metadata(tokenAddress).transfer(to, amount);
     }
 
-    receive() external payable 
-    {
-        revert("Call transferNative() instead");
-    }    
+    receive() external payable {}
 }

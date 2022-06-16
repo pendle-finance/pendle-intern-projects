@@ -48,14 +48,8 @@ describe("TestTokenDistribute", () => {
   it("test owner modifier successfully", async () => {
     await expect(tokenDistribute.connect(Alice).depositErc20(erc20A.address, 0)).to.be.revertedWith("not the owner of the contract");
     await expect(tokenDistribute.connect(Alice).distributeErc20(erc20A.address, Bob.address, 0)).to.be.revertedWith("not the owner of the contract");
-    await expect(tokenDistribute.connect(Alice).transferNative(Bob.address)).to.be.revertedWith("not the owner of the contract");
+    await expect(tokenDistribute.connect(Alice).distributeNative(Bob.address, 0)).to.be.revertedWith("not the owner of the contract");
   });
-
-  // it("Anton transfers erc20A to contract successfully", async () => {
-  //   let amount = 20;
-  //   await erc20A.transfer(tokenDistribute.address, amount);
-  //   expect(await erc20A.balanceOf(tokenDistribute.address)).to.be.eq(amount);
-  // });
 
   it("Anton approves erc20A to the contract and distribute to interns successfully", async () => {
     let totalAmount = 20;
@@ -84,19 +78,44 @@ describe("TestTokenDistribute", () => {
     expect(await tokenDistribute.distributedErc20(erc20A.address)).to.be.eq(BobAmount);
   });
 
-  it("Anton transfers ETH to the contract and distribute to interns successfully", async () => {
+  it("Anton approves erc20A to the contract and distribute to interns in batch successfully", async () => {
+    let totalAmount = 20;
+    await erc20A.approve(tokenDistribute.address, totalAmount);
+    await tokenDistribute.depositErc20(erc20A.address, totalAmount);
+
+    await tokenDistribute.batchdistributeErc20(erc20A.address, [Alice.address, Bob.address], totalAmount/2);
+
+    expect(await tokenDistribute.erc20BalanceOf(erc20A.address, Alice.address)).to.be.eq(totalAmount/2);
+    expect(await tokenDistribute.erc20BalanceOf(erc20A.address, Bob.address)).to.be.eq(totalAmount/2);
+  });
+
+  it("Anton transfers ETH to the contract and distribute to the intern successfully", async () => {
     let amount = 1e10;
 
-    await expect(tokenDistribute.withdrawNative(Alice.address)).to.be.revertedWith("no balance to withdraw");
-    await expect(tokenDistribute.transferNative(constants.AddressZero, {value: amount})).to.be.revertedWith("invalid receiver");
-    await expect(tokenDistribute.transferNative(Alice.address, {value: 0})).to.be.revertedWith("transfer amount = 0");
-    await expect(Alice.sendTransaction({to: tokenDistribute.address, value: amount})).to.be.revertedWith("Call transferNative() instead"); 
+    await admin.sendTransaction({to: tokenDistribute.address, value: amount});
 
-    await tokenDistribute.transferNative(Alice.address, {value: amount});
-    expect(await tokenDistribute.nativeBalanceOf(Alice.address)).to.be.eq(amount);
+    await expect(tokenDistribute.withdrawNative(Alice.address)).to.be.revertedWith("no balance to withdraw");
+    await expect(tokenDistribute.distributeNative(constants.AddressZero, amount)).to.be.revertedWith("invalid receiver");
+    await expect(tokenDistribute.distributeNative(Alice.address, amount+1)).to.be.revertedWith("not enough eth to distribute");
+    
+    await tokenDistribute.distributeNative(Alice.address, amount);
+    expect(await tokenDistribute.nativeBalanceOf(Alice.address)).to.be.eq(amount); 
 
     await expect(await tokenDistribute.withdrawNative(Alice.address)).to.changeEtherBalance(Alice, amount);
     expect(await tokenDistribute.nativeBalanceOf(Alice.address)).to.be.eq(0);
+  });
+
+  it("Anton transfers ETH to the contract and batch distribute to Alice and Bob successfully", async () => {
+    let amount = 1e10;
+
+    await admin.sendTransaction({to: tokenDistribute.address, value: amount});
+
+    await expect(tokenDistribute.batchDistributeNative([Alice.address, Bob.address], amount/2+1)).to.be.revertedWith("not enough eth to distribute");
+    
+    await tokenDistribute.batchDistributeNative([Alice.address, Bob.address], amount/2);
+
+    expect(await tokenDistribute.nativeBalanceOf(Alice.address)).to.be.eq(amount/2); 
+    expect(await tokenDistribute.nativeBalanceOf(Bob.address)).to.be.eq(amount/2);
   });
 
   it("Anton approves erc20A and erc20B to the contract and distribute to interns successfully", async () => {
@@ -112,7 +131,8 @@ describe("TestTokenDistribute", () => {
     await tokenDistribute.depositErc20(erc20B.address, ercBAmount);
     await tokenDistribute.distributeErc20(erc20B.address, Alice.address, ercBAmount);
 
-    await tokenDistribute.transferNative(Alice.address, {value: ethAmount});
+    await admin.sendTransaction({to: tokenDistribute.address, value: ethAmount});
+    await tokenDistribute.distributeNative(Alice.address, ethAmount);
     let prevBalance = await hre.ethers.provider.getBalance(Alice.address);
 
     await tokenDistribute.withdrawAll(Alice.address);
@@ -122,11 +142,12 @@ describe("TestTokenDistribute", () => {
     expect(await hre.ethers.provider.getBalance(Alice.address)).to.be.eq(prevBalance.add(ethAmount));
   });
 
-  it("Anton transfers ETH to the contract and distribute to interns successfully, by Long and Lam", async () => {
+  it("Anton transfers ETH to the contract and distribute to interns successfully, calculated gas fee", async () => {
     let amount = 1e10;
     let prevBalance = await hre.ethers.provider.getBalance(Alice.address);
 
-    await tokenDistribute.transferNative(Alice.address, {value: amount});
+    await admin.sendTransaction({to: tokenDistribute.address, value: amount});
+    await tokenDistribute.distributeNative(Alice.address, amount);
 
     const tx = await tokenDistribute.connect(Alice).withdrawNative(Alice.address);
     const receipt = await tx.wait();
