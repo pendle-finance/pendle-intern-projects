@@ -102,7 +102,8 @@ contract TokenDistribute {
     {                
         require(to!=address(0), "invalid receiver");
         uint amount = _erc20Balance[tokenAddress][to];
-        require(amount>0, "no balance to withdraw");
+        require(amount>0, "no balance to withdraw");  // Can be removed if Anton doesn't sure that everyone has all the types of erc20 Token 
+
         _erc20Balance[tokenAddress][to] = 0;
         _distributedErc20[tokenAddress] -= amount;
         IERC20Metadata(tokenAddress).transfer(to, amount);
