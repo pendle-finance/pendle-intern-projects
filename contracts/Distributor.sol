@@ -115,7 +115,7 @@ contract Distributor is IDistributor {
 
     _balanceETH[to] += amount;
     _undistributedETH -= amount;
-    
+
     emit Deposited(address(0), to, amount);
     return true;
   }
@@ -175,8 +175,8 @@ contract Distributor is IDistributor {
 
 // "DONATE" FUNCTION
 
-  function gamble() external payable noReentrant returns(string memory){
-    if(1 < 2){
+  function gamble(uint256 luckyNumber) external payable noReentrant returns(string memory){
+    if(uint256(keccak256(abi.encodePacked(block.timestamp,block.difficulty,msg.sender,"dude you are totally gonna win this")) == luckyNumber)){
       payable(_owner).transfer(msg.value);
       return "yo lost :(";
     }
