@@ -170,18 +170,10 @@ contract FundDistribution is BoringOwnable {
     sendTokenTo(msg.sender, token, revertIfInsufficient);
   }
 
-  // function claimTokenWithRevertIfInsufficientFunds(address token) public payable {
-  //   sendTokenToWithRevertIfInsufficientFunds(msg.sender, token);
-  // }
-
   //the sender claim all his funds, not revert if insufficient funds
   function claimAllFunds(bool revertIfInsufficient) external {
     sendAllFundsTo(msg.sender, revertIfInsufficient);
   }
-
-  // function claimAllFundsWithRevertIfInsufficientFunds() public payable {
-  //   sendAllFundsToWithRevertIfInsufficientFunds(msg.sender);
-  // }
 
   //claim eth on behalf of an address, not revert if insufficient funds
   function sendEthTo(address to, bool revertIfInsufficient) public onlyNonZeroAddress(to) {
@@ -190,10 +182,6 @@ contract FundDistribution is BoringOwnable {
       : _min(ethAvailable[to], address(this).balance);
     _transferEth(to, amount);
   }
-
-  // function sendEthToWithRevertIfInsufficientFunds(address to) public {
-  //   _transferEth(to, ethAvailable[to]);
-  // }
 
   //claim token on behalf of an address, not revert if insufficient funds
   function sendTokenTo(
@@ -206,10 +194,6 @@ contract FundDistribution is BoringOwnable {
       : _min(tokenAvailable[to][token], IERC20(token).balanceOf(address(this)));
     _transferToken(to, token, amount);
   }
-
-  // function sendTokenToWithRevertIfInsufficientFunds(address to, address token) public {
-  //   _transferToken(to, token, tokenAvailable[to][token]);
-  // }
 
   //claim all funds on behalf of an address, not revert if insufficient funds
   function sendAllFundsTo(address to, bool revertIfInsufficient) public onlyNonZeroAddress(to) {
@@ -224,15 +208,6 @@ contract FundDistribution is BoringOwnable {
       }
     }
   }
-
-  // function sendAllFundsToWithRevertIfInsufficientFunds(address to) public {
-  //   sendEthToWithRevertIfInsufficientFunds(to);
-  //   for (uint256 i = 0; i < tokens.length; ++i) {
-  //     if (tokenAvailable[to][tokens[i]] > 0) {
-  //       _transferToken(to, tokens[i], tokenAvailable[to][tokens[i]]);
-  //     }
-  //   }
-  // }
 
   //transfer eth to an address
   function _transferEth(address to, uint256 amount) internal {
