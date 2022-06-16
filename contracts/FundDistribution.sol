@@ -60,8 +60,18 @@ contract FundDistribution is BoringOwnable {
     funders[_funder] = true;
   }
 
+  function removeFunder(address _funder) public onlyOwner {
+    require(funders[_funder], "No funder");
+    delete funders[_funder];
+  }
+
   function addDistributor(address _distributor) public onlyOwner {
     distributors[_distributor] = true;
+  }
+
+  function removeDistributor(address _distributor) public onlyOwner {
+    require(distributors[_distributor], "No distributor");
+    delete distributors[_distributor];
   }
 
   receive() external payable onlyFunders onlyNonZeroAmount(msg.value) {
