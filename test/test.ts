@@ -141,7 +141,7 @@ describe('FundDistribution', () => {
       await FundDistribution.setEthApprove(addr2.address, 50);
       await FundDistribution.setTokenApprove(addr2.address, TokenA.address, 20);
       await FundDistribution.setTokenApprove(addr2.address, TokenB.address, 30);
-      await FundDistribution.sendAllFundsTo(addr2.address);
+      await FundDistribution.sendAllFundsTo(addr2.address, false);
       const afterEthBalance = await addr2.getBalance();
       const afterTokenABalance = await TokenA.balanceOf(addr2.address);
       const afterTokenBBalance = await TokenB.balanceOf(addr2.address);
@@ -156,7 +156,7 @@ describe('FundDistribution', () => {
       await FundDistribution.setEthApprove(addr2.address, 50);
       await FundDistribution.setTokenApprove(addr2.address, TokenA.address, 20);
       await FundDistribution.setTokenApprove(addr2.address, TokenB.address, 30);
-      const tx = await FundDistribution.connect(addr2).claimAllFunds();
+      const tx = await FundDistribution.connect(addr2).claimAllFunds(false);
       const receipt = await tx.wait();
       const gasSpent = receipt.gasUsed.mul(receipt.effectiveGasPrice);
       const afterEthBalance = await addr2.getBalance();
@@ -173,7 +173,7 @@ describe('FundDistribution', () => {
       await FundDistribution.setEthApprove(addr2.address, ethers.utils.parseEther('2'));
       await FundDistribution.setTokenApprove(addr2.address, TokenA.address, 100);
       await FundDistribution.setTokenApprove(addr2.address, TokenB.address, 100);
-      await FundDistribution.sendAllFundsTo(addr2.address);
+      await FundDistribution.sendAllFundsTo(addr2.address, false);
       const afterEthBalance = await addr2.getBalance();
       const afterTokenABalance = await TokenA.balanceOf(addr2.address);
       const afterTokenBBalance = await TokenB.balanceOf(addr2.address);
@@ -191,7 +191,7 @@ describe('FundDistribution', () => {
       await FundDistribution.setEthApprove(addr2.address, ethers.utils.parseEther('2'));
       await FundDistribution.setTokenApprove(addr2.address, TokenA.address, 100);
       await FundDistribution.setTokenApprove(addr2.address, TokenB.address, 100);
-      const tx = await FundDistribution.connect(addr2).claimAllFunds();
+      const tx = await FundDistribution.connect(addr2).claimAllFunds(false);
       const receipt = await tx.wait();
       const gasSpent = receipt.gasUsed.mul(receipt.effectiveGasPrice);
       const afterEthBalance = await addr2.getBalance();
@@ -208,31 +208,31 @@ describe('FundDistribution', () => {
       await FundDistribution.setEthApprove(addr2.address, ethers.utils.parseEther('2'));
       await FundDistribution.setTokenApprove(addr2.address, TokenA.address, 100);
       await FundDistribution.setTokenApprove(addr2.address, TokenB.address, 100);
-      await expect(FundDistribution.connect(addr2).claimAllFundsWithRevertIfInsufficientFunds()).to.be.reverted;
+      await expect(FundDistribution.connect(addr2).claimAllFunds(true)).to.be.reverted;
     });
     it('claim Ether', async () => {
       await FundDistribution.setEthApprove(addr2.address, 50);
-      expect(await FundDistribution.sendEthTo(addr2.address)).to.changeEtherBalance(addr2, 50);
+      expect(await FundDistribution.sendEthTo(addr2.address, false)).to.changeEtherBalance(addr2, 50);
     });
     it('claim Ether revert if insufficient balance', async () => {
       await FundDistribution.setEthApprove(addr2.address, ethers.utils.parseEther('2'));
-      await expect(FundDistribution.connect(addr2).claimEthWithRevertIfInsufficientFunds()).to.be.reverted;
+      await expect(FundDistribution.connect(addr2).claimEth(true)).to.be.reverted;
     });
     it('claim Ether to self', async () => {
       await FundDistribution.setEthApprove(addr2.address, 50);
-      expect(await FundDistribution.connect(addr2).claimEth()).to.changeEtherBalance(addr2, 50);
+      expect(await FundDistribution.connect(addr2).claimEth(false)).to.changeEtherBalance(addr2, 50);
     });
     it('claim token', async () => {
       await FundDistribution.setTokenApprove(addr2.address, TokenA.address, 50);
       await FundDistribution.setTokenApprove(addr2.address, TokenB.address, 60);
-      await FundDistribution.sendTokenTo(addr2.address, TokenA.address);
+      await FundDistribution.sendTokenTo(addr2.address, TokenA.address, false);
       expect(await TokenA.balanceOf(addr2.address)).to.equal(50);
     });
     it('claim token revert if insufficient balance', async () => {
       await FundDistribution.setTokenApprove(addr2.address, TokenA.address, 100);
-      await expect(
-        FundDistribution.connect(addr2).claimTokenWithRevertIfInsufficientFunds(TokenA.address)
-      ).to.be.revertedWith('Not enough balance');
+      await expect(FundDistribution.connect(addr2).claimToken(TokenA.address, true)).to.be.revertedWith(
+        'Not enough balance'
+      );
     });
   });
   describe('test emit events', () => {

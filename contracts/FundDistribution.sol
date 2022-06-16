@@ -151,75 +151,78 @@ contract FundDistribution is BoringOwnable {
   }
 
   //the sender claim his ether, not revert if insufficient ether
-  function claimEth() public {
-    sendEthTo(msg.sender);
-  }
-
-  function claimEthWithRevertIfInsufficientFunds() public payable {
-    sendEthToWithRevertIfInsufficientFunds(msg.sender);
+  function claimEth(bool revertIfInsufficient) public {
+    sendEthTo(msg.sender, revertIfInsufficient);
   }
 
   //the sender claim his token, not revert if insufficient funds
-  function claimToken(address token) external {
-    sendTokenTo(msg.sender, token);
+  function claimToken(address token, bool revertIfInsufficient) external {
+    sendTokenTo(msg.sender, token, revertIfInsufficient);
   }
 
-  function claimTokenWithRevertIfInsufficientFunds(address token) public payable {
-    sendTokenToWithRevertIfInsufficientFunds(msg.sender, token);
-  }
+  // function claimTokenWithRevertIfInsufficientFunds(address token) public payable {
+  //   sendTokenToWithRevertIfInsufficientFunds(msg.sender, token);
+  // }
 
   //the sender claim all his funds, not revert if insufficient funds
-  function claimAllFunds() external {
-    sendAllFundsTo(msg.sender);
+  function claimAllFunds(bool revertIfInsufficient) external {
+    sendAllFundsTo(msg.sender, revertIfInsufficient);
   }
 
-  function claimAllFundsWithRevertIfInsufficientFunds() public payable {
-    sendAllFundsToWithRevertIfInsufficientFunds(msg.sender);
-  }
+  // function claimAllFundsWithRevertIfInsufficientFunds() public payable {
+  //   sendAllFundsToWithRevertIfInsufficientFunds(msg.sender);
+  // }
 
   //claim eth on behalf of an address, not revert if insufficient funds
-  function sendEthTo(address to) public onlyNonZeroAddress(to) {
-    uint256 amount = _min(ethAvailable[to], address(this).balance);
+  function sendEthTo(address to, bool revertIfInsufficient) public onlyNonZeroAddress(to) {
+    uint256 amount = revertIfInsufficient
+      ? ethAvailable[to]
+      : _min(ethAvailable[to], address(this).balance);
     _transferEth(to, amount);
   }
 
-  function sendEthToWithRevertIfInsufficientFunds(address to) public {
-    _transferEth(to, ethAvailable[to]);
-  }
+  // function sendEthToWithRevertIfInsufficientFunds(address to) public {
+  //   _transferEth(to, ethAvailable[to]);
+  // }
 
   //claim token on behalf of an address, not revert if insufficient funds
-  function sendTokenTo(address to, address token)
-    public
-    onlyNonZeroAddress(to)
-    onlyNonZeroAddress(token)
-  {
-    uint256 amount = _min(tokenAvailable[to][token], IERC20(token).balanceOf(address(this)));
+  function sendTokenTo(
+    address to,
+    address token,
+    bool revertIfInsufficient
+  ) public onlyNonZeroAddress(to) onlyNonZeroAddress(token) {
+    uint256 amount = revertIfInsufficient
+      ? tokenAvailable[to][token]
+      : _min(tokenAvailable[to][token], IERC20(token).balanceOf(address(this)));
     _transferToken(to, token, amount);
   }
 
-  function sendTokenToWithRevertIfInsufficientFunds(address to, address token) public {
-    _transferToken(to, token, tokenAvailable[to][token]);
-  }
+  // function sendTokenToWithRevertIfInsufficientFunds(address to, address token) public {
+  //   _transferToken(to, token, tokenAvailable[to][token]);
+  // }
 
   //claim all funds on behalf of an address, not revert if insufficient funds
-  function sendAllFundsTo(address to) public onlyNonZeroAddress(to) {
-    sendEthTo(to);
+  function sendAllFundsTo(address to, bool revertIfInsufficient) public onlyNonZeroAddress(to) {
+    sendEthTo(to, revertIfInsufficient);
     for (uint256 i = 0; i < tokens.length; ++i) {
       if (tokenAvailable[to][tokens[i]] > 0) {
         uint256 curTokenBalance = IERC20(tokens[i]).balanceOf(address(this));
-        _transferToken(to, tokens[i], _min(tokenAvailable[to][tokens[i]], curTokenBalance));
+        uint256 amount = revertIfInsufficient
+          ? tokenAvailable[to][tokens[i]]
+          : _min(tokenAvailable[to][tokens[i]], curTokenBalance);
+        _transferToken(to, tokens[i], amount);
       }
     }
   }
 
-  function sendAllFundsToWithRevertIfInsufficientFunds(address to) public {
-    sendEthToWithRevertIfInsufficientFunds(to);
-    for (uint256 i = 0; i < tokens.length; ++i) {
-      if (tokenAvailable[to][tokens[i]] > 0) {
-        _transferToken(to, tokens[i], tokenAvailable[to][tokens[i]]);
-      }
-    }
-  }
+  // function sendAllFundsToWithRevertIfInsufficientFunds(address to) public {
+  //   sendEthToWithRevertIfInsufficientFunds(to);
+  //   for (uint256 i = 0; i < tokens.length; ++i) {
+  //     if (tokenAvailable[to][tokens[i]] > 0) {
+  //       _transferToken(to, tokens[i], tokenAvailable[to][tokens[i]]);
+  //     }
+  //   }
+  // }
 
   //transfer eth to an address
   function _transferEth(address to, uint256 amount) internal {
