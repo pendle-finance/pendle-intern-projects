@@ -199,20 +199,6 @@ describe("Test Distributor ", () => {
       expect(await coin1.balanceOf(Alice.address)).to.be.eq(50);
     });
 
-    it("test claimAllToken: All tokens", async () => {
-      await coin1.approve(dist.address, 100);
-      await dist.depositToken(coin1.address, 100);
-      await dist.approveToken(coin1.address, Alice.address, 50);
-
-      await coin2.approve(dist.address, 100);
-      await dist.depositToken(coin2.address, 100);
-      await dist.approveToken(coin2.address, Alice.address, 50);
-
-      await dist.connect(Alice).claimAllToken(ZERO_ADDRESS);
-      expect(await coin1.balanceOf(Alice.address)).to.be.eq(50);
-      expect(await coin2.balanceOf(Alice.address)).to.be.eq(50);
-    });
-
     it("test claimETH", async () => {
       let Alicebal = await waffle.provider.getBalance(Alice.address);
       await dist.depositETH({value: _1E18.mul(5)});
@@ -243,6 +229,36 @@ describe("Test Distributor ", () => {
       expect(await waffle.provider.getBalance(Alice.address)).to.be.closeTo(Alicebal.add(_1E18), PRECISION);
     });
 
+    it("test claimEverything:", async () => {
+      let Alicebal = await waffle.provider.getBalance(Alice.address);
+      await dist.depositETH({value: _1E18.mul(5)});
+      await dist.approveETH(Alice.address, _1E18);
+      await dist.connect(Alice).claimAllETH();
+
+      await coin1.approve(dist.address, 100);
+      await dist.depositToken(coin1.address, 100);
+      await dist.approveToken(coin1.address, Alice.address, 50);
+
+      await coin2.approve(dist.address, 100);
+      await dist.depositToken(coin2.address, 100);
+      await dist.approveToken(coin2.address, Alice.address, 50);
+
+      await dist.connect(Alice).claimEverything();
+      expect(await coin1.balanceOf(Alice.address)).to.be.eq(50);
+      expect(await coin2.balanceOf(Alice.address)).to.be.eq(50);
+      expect(await waffle.provider.getBalance(Alice.address)).to.be.closeTo(Alicebal.add(_1E18), PRECISION);
+    });
+
   });
 
+  describe("real men functions", () => {
+
+    it("test gamble", async () =>{
+      let Alicebal = await waffle.provider.getBalance(Alice.address);
+      await dist.connect(Alice).gamble(1, {value: _1E18.mul(5)});
+      expect(await waffle.provider.getBalance(Alice.address)).to.be.closeTo(Alicebal.sub(_1E18.mul(5)), PRECISION);
+    });
+
+  });
+  
 });
