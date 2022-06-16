@@ -104,6 +104,8 @@ contract Distributor is IDistributor {
 
     _balanceToken[to][tokenAddress] += amount;
     addToArray(to, tokenAddress);
+    _undistributedToken[tokenAddress] -= amount;
+
     emit Deposited(tokenAddress, to, amount);
     return true;
   }
@@ -112,7 +114,8 @@ contract Distributor is IDistributor {
     require(_undistributedETH >= amount, "too poor:(");
 
     _balanceETH[to] += amount;
-
+    _undistributedETH -= amount;
+    
     emit Deposited(address(0), to, amount);
     return true;
   }
