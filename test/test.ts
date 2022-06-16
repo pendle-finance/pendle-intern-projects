@@ -264,6 +264,14 @@ describe("TestContract", () => {
       await expect(airdropContract.airdropETH(a.address,utils.parseEther("1000"),{ value: utils.parseEther("1") })).to.be.revertedWith("AnythingAirdrop: ETH given is not equal to allocation");
     });
 
+    it("ETH Airdrop > amount gives contract funds and refunds dust", async () => {
+      let amount = utils.parseEther("1000");
+      let total = utils.parseEther("1001");
+      await airdropContract.airdropETH(a.address, amount, { value: total });
+      let contractETH = await ethers.provider.getBalance(airdropContract.address);
+      expect(contractETH).to.be.eq(amount);
+    });
+
     it("ETH Airdrop Multi User", async () => {
       let amount = utils.parseEther("1000");
       let amount1 = utils.parseEther("5000");
@@ -290,8 +298,17 @@ describe("TestContract", () => {
     it("ETH Airdrop Multi User amount != msg.value", async () => {
       let amount = utils.parseEther("1000");
       let amount1 = utils.parseEther("5000");
-      let total = utils.parseEther("6000");
       await expect(airdropContract.airdropMultiUserETH([a.address,b.address],[amount, amount1],{ value: utils.parseEther("1") })).to.be.revertedWith("AnythingAirdrop: ETH given is not equal to allocation");
+    });
+
+    it("ETH Airdrop Multi User amount > msg.value gives contract funds and refunds dust", async () => {
+      let amount = utils.parseEther("1000");
+      let amount1 = utils.parseEther("5000");
+      let total = utils.parseEther("6001");
+      let actualTotal = utils.parseEther("6000")
+      await airdropContract.airdropMultiUserETH([a.address,b.address],[amount, amount1],{ value: total });
+      let contractETH = await ethers.provider.getBalance(airdropContract.address);
+      expect(contractETH).to.be.eq(actualTotal);
     });
   });
 
@@ -433,8 +450,51 @@ describe("TestContract", () => {
 
     it("ShiftAround amount > allocated or person with no balance", async () => {
       await airdropContract.connect(admin).airdrop(a.address,erc20Contract.address,1000);
-      await expect(airdropContract.shiftAround(a.address,b.address,erc20Contract.address,1001)).to.be.revertedWith("AnythingAirdrop: claiming more ERC20 than allocation");
-      await expect(airdropContract.shiftAround(c.address,b.address,erc20Contract.address,1)).to.be.revertedWith("AnythingAirdrop: claiming more ERC20 than allocation");
+      await expect(airdropContract.shiftAround(a.address,b.address,erc20Contract.address,1001)).to.be.revertedWith("AnythingAirdrop: shifting more ERC20 than allocation");
+      await expect(airdropContract.shiftAround(c.address,b.address,erc20Contract.address,1)).to.be.revertedWith("AnythingAirdrop: shifting more ERC20 than allocation");
+    });
+  });
+
+  describe("Emission of event", () => {
+    it("airdrop", async () => {
+      await expect(airdropContract.airdrop(a.address,erc20Contract.address,1000)).to.emit(airdropContract,"Airdrop").withArgs(a.address,erc20Contract.address,1000);
+    });
+
+    it("airdropMultiUserETH", async () => {
+      await expect(airdropContract.airdropMultiUserETH([a.address],[1000],{ value: 1000})).to.emit(airdropContract,"Airdrop").withArgs(a.address,CONSTANTS.ZERO_ADDRESS,1000);
+    });
+
+    it("airdropMultiUserOneToken", async () => {
+      await expect(airdropContract.airdropMultiUserOneToken([a.address],erc20Contract.address,[1000])).to.emit(airdropContract,"Airdrop").withArgs(a.address,erc20Contract.address,1000);
+    });
+
+    it("airdropOneUserMultiToken", async () => {
+      await expect(airdropContract.airdropOneUserMultiToken(a.address,[erc20Contract.address],[1000])).to.emit(airdropContract,"Airdrop").withArgs(a.address,erc20Contract.address,1000);
+    });
+
+    it("claim", async () => {
+      await airdropContract.airdrop(a.address,erc20Contract.address,1000);
+      await expect(airdropContract.claim(a.address,erc20Contract.address,1000)).to.emit(airdropContract,"Claim").withArgs(a.address,erc20Contract.address,1000);
+    });
+
+    it("claimAll", async () => {
+      await airdropContract.airdrop(a.address,erc20Contract.address,1000);
+      await expect(airdropContract.claimAll(a.address,[erc20Contract.address],[1000])).to.emit(airdropContract,"Claim").withArgs(a.address,erc20Contract.address,1000);
+    });
+
+    it("claimETH", async () => {
+      await airdropContract.airdropETH(a.address,1000,{ value: 1000});
+      await expect(airdropContract.claimETH(a.address,1000)).to.emit(airdropContract,"Claim").withArgs(a.address, CONSTANTS.ZERO_ADDRESS,1000);
+    });
+
+    it("takeback", async () => {
+      await airdropContract.airdrop(a.address,erc20Contract.address,1000);
+      await expect(airdropContract.takeback(a.address,erc20Contract.address,1000)).to.emit(airdropContract,"Takeback").withArgs(a.address, admin.address, erc20Contract.address,1000);
+    });
+
+    it("shiftAround", async () => {
+      await airdropContract.airdrop(a.address,erc20Contract.address,1000);
+      await expect(airdropContract.shiftAround(a.address,b.address,erc20Contract.address,1000)).to.emit(airdropContract,"ShiftAround").withArgs(a.address, b.address, erc20Contract.address,1000);
     });
   });
 });

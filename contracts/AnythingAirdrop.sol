@@ -8,9 +8,10 @@ import "./BoringOwnable.sol";
 contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
   //Please refer to IAnythingAirdrop for events emitted
 
-  //Instead of depositing money into the smart contract and then call functions to allocate the money to people accordingly, AnythingAirdrop will ask for a transfer from the user according to the allocation given
-  //Idk if this is better but it is what I thought of initially
-
+  /*Instead of depositing money into the smart contract and then call functions to allocate the money to people accordingly,
+    AnythingAirdrop will ask for a transfer from the user according to the allocation given
+    Idk if this is better but it is what I thought of initially
+  */
   //mapping of recepientAddress => tokenAddress => claimAmount
   mapping(address => mapping(address => uint256)) private erc20Distribution;
   mapping(address => uint256) private ethDistribution;
@@ -27,8 +28,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     address tokenAddress,
     uint256 amount
   ) external onlyOwner {
-    _deposit(to, tokenAddress, amount);
-    TransferHelper.safeTransferFrom(tokenAddress, msg.sender, address(this), amount);
+    _airdrop(to, tokenAddress, amount);
   }
 
   //Recommended to use WETH instead of ETH
@@ -36,11 +36,12 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     require(msg.value >= amount, "AnythingAirdrop: ETH given is not equal to allocation");
     _depositETH(to, amount);
     uint256 remainder = msg.value - amount;
-    if (remainder > 0) payable(address(this)).transfer(remainder);
+    if (remainder > 0) TransferHelper.safeTransferETH(msg.sender, remainder);
     //require msg.value >= amount and refund ETH dust instead??
   }
 
-  //Gas optimized to do only 1 external call safetransferFrom for up to infinite number of people
+  /// @dev _airdrop() is not used because code is implemented differently -> gas optimized so only 1 external call of safeTransferFrom is executed to save gas.
+  /// this function scales linearly only with SSTORE. O(x * SSTORE) instead of O(x *(SSTORE + EXTERNAL_SLOAD))
   function airdropMultiUserOneToken(
     address[] calldata toAddresses,
     address tokenAddress,
@@ -79,7 +80,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     }
     require(msg.value >= totalETH, "AnythingAirdrop: ETH given is not equal to allocation");
     uint256 remainder = msg.value - totalETH;
-    if (remainder > 0) payable(address(this)).transfer(remainder);
+    if (remainder > 0) TransferHelper.safeTransferETH(msg.sender, remainder);
     //require msg.value >= totalETH and refund ETH dust instead??
   }
 
@@ -95,8 +96,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
       "AnythingAirdrop: Invalid input parameters given (Length does not match)"
     );
     for (uint256 i = 0; i < tokenAddrLength; i++) {
-      _deposit(toAddress, tokenAddresses[i], dropAmount[i]);
-      TransferHelper.safeTransferFrom(tokenAddresses[i], msg.sender, address(this), dropAmount[i]);
+      _airdrop(toAddress, tokenAddresses[i], dropAmount[i]);
     }
   }
 
@@ -134,6 +134,8 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     }
   }
   
+  /// @notice Used to takeback an amount incorrectly given to a user(in case fat finger give wrong address or give wrong amount).
+  /// Coincidentally also works as a way to reduce distribution for a user.
   function takeback(
     address from,
     address tokenAddress,
@@ -148,6 +150,8 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     emit Takeback(from, msg.sender, address(0), amount);
   }
 
+  /// @notice Used to shift airdrop amounts around (e.g I want to shift 50 PENDLE rewards from user A to user B)
+  /// If tokenAddress is address(0) it refers to ETH. -> collision of address(0) have been prevented in _deposit
   function shiftAround(address shiftFrom, address shiftTo, address tokenAddress, uint256 amount) external onlyOwner checkZeroAddress(shiftFrom) checkZeroAddress(shiftTo) {
     if (tokenAddress != address(0)) {
       uint256 allocatedAmount = this.getERC20Distribution(shiftFrom, tokenAddress);
@@ -168,6 +172,11 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
     emit ShiftAround(shiftFrom, shiftTo, tokenAddress, amount);
   }
 
+  function _airdrop(address to, address tokenAddress, uint256 amount) internal {
+    _deposit(to, tokenAddress, amount);
+    TransferHelper.safeTransferFrom(tokenAddress, msg.sender, address(this), amount);
+  }
+
   function _deposit(
     address to,
     address tokenAddress,
@@ -182,7 +191,7 @@ contract AnythingAirdrop is BoringOwnable, IAnythingAirdrop {
 
   function _depositETH(address to, uint256 amount) internal checkZeroAddress(to){
     ethDistribution[to] += amount;
-    emit Airdrop(address(0), to, amount);
+    emit Airdrop(to, address(0), amount);
   }
 
   function _claim(address to, address tokenAddress, uint256 amount) internal {
