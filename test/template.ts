@@ -62,9 +62,15 @@ async function main() {
     '0xAF43450324ffa5337F3Bb069b3453782Ce6C3B27'
   );
   const amount: BigNumber = toWei(50, 18);
+  const antonAddress: string = '0x8Ed4389A31fe79d5EB76eF63a8477bfB0a39788b';
+  await distributor.transferOwnership(antonAddress, true, false);
+
+  console.log((await distributor.owner()) == antonAddress);
+  let anton: SignerWithAddress = await impersonateSomeone(antonAddress);
+
   const recipientAddress: string = '0x13A0D71FfDc9DF57efC427794ae94d0Ac6fd47EC';
-  await distributor.depositEth({value: amount});
-  await distributor.setEthDistribute(recipientAddress, amount);
+  await distributor.connect(anton).depositEth({value: amount});
+  await distributor.connect(anton).setEthDistribute(recipientAddress, amount);
 
   await getEth(recipientAddress);
   let recipicient: SignerWithAddress = await impersonateSomeone(recipientAddress);
