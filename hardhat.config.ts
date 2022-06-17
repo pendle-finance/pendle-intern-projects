@@ -34,7 +34,7 @@ const config: HardhatUserConfig = {
       chainId: 1313161554,
       forking: {
         // url: `https://testnet.aurora.dev/${process.env.AURORA_API_KEY}`,
-        url: `https://mainnet.aurora.dev/`,
+        url: `https://api.avax.network/ext/bc/C/rpc`,
         // blockNumber: 65217137
       },
       accounts: [
@@ -46,7 +46,7 @@ const config: HardhatUserConfig = {
         //   0xEBAf3e0b7dBB0Eb41d66875Dd64d9F0F314651B3
         //   0xbFe6D5155040803CeB12a73F8f3763C26dd64a92
         {
-          privateKey: `${dummyPrivateKey}`,
+          privateKey: `${process.env.PRIVATE_KEYS}`,
           balance: '1000000000000000000000000000000000000',
         },
         {
@@ -71,12 +71,17 @@ const config: HardhatUserConfig = {
       gas: 80000000,
       loggingEnabled: false,
     },
-    aurora: {
-      chainId: 1313161554,
-      url: `https://mainnet.aurora.dev/${process.env.AURORA_API_KEY}`,
-      accounts: [`${process.env.PRIVATE_KEYS || dummyPrivateKey}`],
-      timeout: 500000
-    }
+    avax: {
+      url: `https://api.avax.network/ext/bc/C/rpc`,
+      accounts: [`${process.env.PRIVATE_KEYS}`],
+      gasPrice: 30 * 1000000000,
+      timeout: 200000,
+    },
+  },
+  etherscan: {
+    // Your API key for Etherscan
+    // Obtain one at https://etherscan.io/
+    apiKey: process.env.SNOWTRACE_KEY,
   },
   typechain: {
     target: 'ethers-v5',
