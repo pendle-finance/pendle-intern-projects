@@ -124,6 +124,25 @@ export async function deploy<CType extends Contract>(
   return contract as CType;
 }
 
+export async function deployWithoutLog<CType extends Contract>(
+  abiType: string,
+  args: any[],
+  verify?: boolean,
+  name?: string
+) {
+  name = name || abiType;
+  // console.log(`Deploying ${name}...`);
+  const contractFactory = await hre.ethers.getContractFactory(abiType);
+  const contract = await contractFactory.deploy(...args);
+  await contract.deployed();
+  // console.log(`${name} deployed at address: ${(await contract).address}`);
+
+  if (verify === true) {
+    await verifyContract(contract.address, args);
+  }
+  return contract as CType;
+}
+
 export async function verifyContract(contract: string, constructor: any[]) {
   await hre.run("verify:verify", {
     address: contract,
