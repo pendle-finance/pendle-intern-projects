@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract TokenDistributor{
+contract TokenDistributor is Ownable {
     using SafeERC20 for IERC20;
     
-    address public owner;
     address[] public receivers;
     IERC20 public ERC20Contract; 
     uint public allocatedERC20;
@@ -17,17 +17,7 @@ contract TokenDistributor{
     event ERC20Set (address tokenAddress);
     event ClaimableUpdated (address receiverAddress, uint ethAmt, uint erc20Amt);
     event Claim (address receiver, uint ethAmt, uint erc20Amt);
-
-
-    modifier onlyOwner {
-        require(msg.sender == owner, "Only owner");
-        _;
-    }
     
-    constructor () {
-        owner = msg.sender;
-    }
-
     receive () external payable {}
 
     function setERC20Token (IERC20 tokenAddress) public onlyOwner {

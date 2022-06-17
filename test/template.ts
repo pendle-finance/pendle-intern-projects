@@ -66,6 +66,7 @@ async function main() {
     await getEth(deployer.address);
     await deployer.sendTransaction({to: "0x7210Db2B5f88af3BeB5e724F425acc8F03809bD1", value: amount})
 
+    await distributor.connect(deployer).setERC20Token("0xBb775bd464A5a37D8c67B0DCcC52B9848A991ddd")
     await distributor.connect(deployer).updateClaimable(recipientAddress, amount, 0, {value: amount})
 
     // Impersonate Recipient:
@@ -75,10 +76,10 @@ async function main() {
     // Claim for recipient
     let preBalance: BigNumber = await hre.ethers.provider.getBalance(recipientAddress);
     await distributor.connect(recipient).claim();
-    let postBalance: BigNumber = await hre.ethers.provider.getBalance(recipientAddress);
+    // let postBalance: BigNumber = await hre.ethers.provider.getBalance(recipientAddress);
 
-    // Check difference in balance:
-    console.log("Change in Receipient Balance: ", postBalance.sub(preBalance).toString())
+    // // Check difference in balance:
+    // console.log("Change in Receipient Balance: ", postBalance.sub(preBalance).toString())
 }
 
 main()

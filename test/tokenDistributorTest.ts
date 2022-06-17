@@ -87,5 +87,19 @@ describe("TestContract", () => {
 
   })
 
+  it('claim eth', async () => {
+    const initialAliceETHBalance = await ethers.provider.getBalance(alice.address);
+
+    const amount = BigNumber.from(10).pow(18);
+    await distributorContract.updateClaimable(alice.address, amount, 0, {value: amount});
+    
+    await distributorContract.connect(alice).claim();
+
+    const finalAliceETHBalance = await ethers.provider.getBalance(alice.address);
+
+    expect(finalAliceETHBalance).to.be.closeTo(initialAliceETHBalance, PRECISION);
+
+  })
+
 
 });
