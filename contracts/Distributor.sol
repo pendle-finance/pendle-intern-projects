@@ -9,7 +9,7 @@ contract Distributor is IDistributor {
 
   uint256 internal MAX_INT = 2**256 - 1;
 
-  address internal _owner;
+  address public _owner;
   address internal ADDRESS_ETH = address(0);
 
   mapping(address=>mapping(address=>uint256)) internal _balanceToken;
@@ -53,6 +53,13 @@ contract Distributor is IDistributor {
     lock = false;
   }
 
+  // SCARY FUNCTIONS
+
+  function transferOwner(address newOwner) external onlyOwner nonZero(newOwner) returns(bool) {
+    _owner = newOwner;
+
+    return true;
+  }
   // VIEW-ONLY FUNCTIONS
 
   function balanceToken(address tokenAddress, address account) external view nonZero(account) returns(uint256) {
