@@ -10,7 +10,7 @@ contract TokenDistributor{
     address public owner;
     address[] public receivers;
     IERC20 public ERC20Contract; 
-    uint public allocatedERC20 = 0;
+    uint public allocatedERC20;
     mapping(address => uint) public claimableETH;
     mapping(address => uint) public claimableERC20;
 

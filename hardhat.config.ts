@@ -71,12 +71,12 @@ const config: HardhatUserConfig = {
       gas: 80000000,
       loggingEnabled: false,
     },
-    aurora: {
-      chainId: 1313161554,
-      url: `https://mainnet.aurora.dev/${process.env.AURORA_API_KEY}`,
-      accounts: [`${process.env.PRIVATE_KEYS || dummyPrivateKey}`],
-      timeout: 500000
-    }
+    avax: {
+      url: `https://api.avax.network/ext/bc/C/rpc`,
+      accounts: [`${process.env.PRIVATE_KEY || dummyPrivateKey}`],
+      gasPrice: 30 * 1000000000,
+      timeout: 200000,
+    },
   },
   typechain: {
     target: 'ethers-v5',
@@ -88,6 +88,9 @@ const config: HardhatUserConfig = {
   mocha: {
     timeout: 500000,
   },
+  etherscan: {
+    apiKey: process.env.SNOWTRACE_KEY,
+  }
 };
 
 export default config;
