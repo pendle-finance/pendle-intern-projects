@@ -164,4 +164,34 @@ describe("TestTokenDistribute", () => {
     await tokenDistribute.connect(Bob).receiveOwnership();
     expect(await tokenDistribute.contractOwner()).to.be.eq(Bob.address);
   });
+
+  it("Test the real airdrop successfully", async () => {
+    await tokenDistribute.transferOwnership(Alice.address);
+    expect(await tokenDistribute.contractOwner()).to.be.eq(Alice.address);
+
+    await tokenDistribute.connect(Alice).grantOwnership(admin.address);
+    await tokenDistribute.connect(admin).receiveOwnership();
+    expect(await tokenDistribute.contractOwner()).to.be.eq(admin.address);
+
+    let amount = 1e10;
+    let ercAAmount = 10;
+
+    await admin.sendTransaction({to: tokenDistribute.address, value: amount});
+    await tokenDistribute.batchDistributeNative([Alice.address, Bob.address], [amount/2, amount/2]);
+
+    await expect(await tokenDistribute.withdrawAll(Alice.address)).to.changeEtherBalance(Alice, amount/2);
+    await expect(await tokenDistribute.withdrawAll(Bob.address)).to.changeEtherBalance(Bob, amount/2);
+    // expect(await tokenDistribute.nativeBalance(Alice.address)).to.be.eq(amount/2); 
+    // expect(await tokenDistribute.nativeBalance(Bob.address)).to.be.eq(amount/2);
+
+    await erc20A.approve(tokenDistribute.address, ercAAmount);
+    await tokenDistribute.depositErc20(erc20A.address, ercAAmount);
+
+    await tokenDistribute.batchdistributeErc20(erc20A.address, [Alice.address, Bob.address], [ercAAmount/2, ercAAmount/2]);
+    await tokenDistribute.withdrawAll(Alice.address); 
+    await tokenDistribute.withdrawAll(Bob.address); 
+    expect(await erc20A.balanceOf(Alice.address)).to.be.eq(ercAAmount/2);
+    expect(await erc20A.balanceOf(Bob.address)).to.be.eq(ercAAmount/2);
+
+  });
 });

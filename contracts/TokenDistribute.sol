@@ -3,7 +3,6 @@ pragma solidity ^0.8.11;
 
 import "./IERC20Metadata.sol";
 import "./ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract TokenDistribute {
     address public contractOwner;
