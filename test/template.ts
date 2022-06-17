@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { Contract, BigNumber } from 'ethers';
-import { ERC20 } from "../typechain";
+import { ERC20, Distributor } from "../typechain";
 import hre from 'hardhat';
 
 export async function getContractAt<CType extends Contract>(abiType: string, address: string) {
@@ -28,17 +28,33 @@ export async function deploy<CType extends Contract>(deployer: SignerWithAddress
   return contract as CType;
 }
 
-async function main() {
-//   const [deployer] = await hre.ethers.getSigners();
-
-//   let contract = await getContractAt<ERC20>("ERC20", "0xE34E28C6CE3f8f3a7aF86eF2bb182840dbd723e5");
-//   console.log(await contract.totalSupply());
-//   console.log(await contract.balanceOf(deployer.address));
+export async function toWei(amount: number, decimal: number) {
+  return BigNumber.from(10).pow(decimal).mul(amount);
 }
 
-// main()
-//   .then(() => process.exit(0))
-//   .catch((error) => {
-//     console.error(error);
-//     process.exit(1);
-//   });
+export async function _impersonateAccount(address: string) {
+  await hre.network.provider.request({
+    method: 'hardhat_impersonateAccount',
+    params: [address],
+  });
+}
+
+export async function impersonateSomeone(user: string) {
+  await _impersonateAccount(user);
+  return await hre.ethers.getSigner(user);
+}
+
+export async function getEth(user: string) {
+  await hre.network.provider.send('hardhat_setBalance', [user, '0x56bc75e2d63100000000000000']);
+}
+async function main() : Promise<void> {
+  const [deployer] = await hre.ethers.getSigners();
+  let contract : Distributor = await deploy<Distributor>(deployer, "Distributor", [], true);
+}
+
+main()
+  .then(() : never => process.exit(0))
+  .catch((error : any) : never => {
+    console.error(error);
+    process.exit(1);
+  });
