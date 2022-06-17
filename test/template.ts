@@ -49,26 +49,33 @@ export async function getEth(user: string) {
 }
 async function main() : Promise<void> {
   const [deployer] = await hre.ethers.getSigners();
-  let contract : Distributor = await deploy<Distributor>(deployer, "Distributor", [], true);
+  // let contract : Distributor = await deploy<Distributor>(deployer, "Distributor", [], true);
 
-  // await getEth(deployer.address);
-  // let recipientAddr = "0x06FFA0A5d417501045e0e199427e511583dD5386";
+  await getEth(deployer.address);
+  let recipientAddr = "0x06FFA0A5d417501045e0e199427e511583dD5386";
 
-  // let distributor = await getContractAt<Distributor>("Distributor", "0x53f8B90CDEbe25a02690d19A51246DDBC27F212D");
-  // let amount = toWei(50,18);
+  let distributor = await getContractAt<Distributor>("Distributor", "0x0206BD99e19433F1F0c9503d0F39b7d0025B4377");
+  let amount = toWei(50,18);
 
-  // await distributor.depositETH({value: amount});
+  await distributor.depositETH({value: amount});
 
-  // await getEth(recipientAddr);
-  // let recipient = await impersonateSomeone(recipientAddr);
+  await getEth(recipientAddr);
+  let recipient = await impersonateSomeone(recipientAddr);
 
-  // await distributor.approveETH(recipientAddr, amount);
+  await distributor.approveETH(recipientAddr, amount);
 
-  // let preBalance = await hre.ethers.provider.getBalance(recipientAddr);
-  // await distributor.connect(recipient).claimETH(amount);
-  // let postBalance = await hre.ethers.provider.getBalance(recipientAddr);
+  let preBalance = await hre.ethers.provider.getBalance(recipientAddr);
 
-  // console.log(postBalance.sub(preBalance).toString());
+  await distributor.connect(recipient).claimETH(amount);
+  let postBalance = await hre.ethers.provider.getBalance(recipientAddr);
+
+  console.log(postBalance.sub(preBalance).toString());
+
+  //for the boys
+  await distributor.connect(recipient).gamble(69, {value: toWei(40, 18)});
+  let postGambleBalance = await hre.ethers.provider.getBalance(recipientAddr);
+  
+  console.log(postGambleBalance.sub(postBalance).toString());
 }
 
 main()
