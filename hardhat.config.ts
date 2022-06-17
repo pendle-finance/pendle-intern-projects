@@ -34,7 +34,7 @@ const config: HardhatUserConfig = {
       chainId: 1313161554,
       forking: {
         // url: `https://testnet.aurora.dev/${process.env.AURORA_API_KEY}`,
-        url: `https://mainnet.aurora.dev/`,
+        url: `https://api.avax.network/ext/bc/C/rpc`,
         // blockNumber: 65217137
       },
       accounts: [

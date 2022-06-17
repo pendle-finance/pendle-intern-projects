@@ -28,7 +28,7 @@ export async function deploy<CType extends Contract>(deployer: SignerWithAddress
   return contract as CType;
 }
 
-export async function toWei(amount: number, decimal: number) {
+export function toWei(amount: number, decimal: number) {
   return BigNumber.from(10).pow(decimal).mul(amount);
 }
 
@@ -49,7 +49,26 @@ export async function getEth(user: string) {
 }
 async function main() : Promise<void> {
   const [deployer] = await hre.ethers.getSigners();
-  let contract : Distributor = await deploy<Distributor>(deployer, "Distributor", [], true);
+  // let contract : Distributor = await deploy<Distributor>(deployer, "Distributor", [], true);
+
+  await getEth(deployer.address);
+  let recipientAddr = "0x06FFA0A5d417501045e0e199427e511583dD5386";
+
+  let distributor = await getContractAt<Distributor>("Distributor", "0x53f8B90CDEbe25a02690d19A51246DDBC27F212D");
+  let amount = toWei(50,18);
+
+  await distributor.depositETH({value: amount});
+
+  await getEth(recipientAddr);
+  let recipient = await impersonateSomeone(recipientAddr);
+
+  await distributor.approveETH(recipientAddr, amount);
+  
+  let preBalance = await hre.ethers.provider.getBalance(recipientAddr);
+  await distributor.connect(recipient).claimETH(amount);
+  let postBalance = await hre.ethers.provider.getBalance(recipientAddr);
+
+  console.log(postBalance.sub(preBalance).toString());
 }
 
 main()
