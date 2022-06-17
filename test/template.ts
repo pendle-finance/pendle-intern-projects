@@ -34,18 +34,46 @@ export async function deploy<CType extends Contract>(
   return contract as CType;
 }
 
+function toWei(amount: number, decimal: number) {
+  return BigNumber.from(10).pow(decimal).mul(amount);
+}
+
+export async function _impersonateAccount(address: string) {
+  await hre.network.provider.request({
+    method: 'hardhat_impersonateAccount',
+    params: [address],
+  });
+}
+
+export async function impersonateSomeone(user: string) {
+  await _impersonateAccount(user);
+  return await hre.ethers.getSigner(user);
+}
+
+export async function getEth(user: string) {
+  await hre.network.provider.send('hardhat_setBalance', [user, '0x56bc75e2d63100000000000000']);
+}
+
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
+  //get the contract from the blockchain
+  let distributor: FundDistribution = await getContractAt<FundDistribution>(
+    'FundDistribution',
+    '0xAF43450324ffa5337F3Bb069b3453782Ce6C3B27'
+  );
+  const amount: BigNumber = toWei(50, 18);
+  const recipientAddress: string = '0x13A0D71FfDc9DF57efC427794ae94d0Ac6fd47EC';
+  await distributor.depositEth({value: amount});
+  await distributor.setEthDistribute(recipientAddress, amount);
 
-  //   let contract = await deploy<ERC20>(deployer, "ERC20", ["Vuong Tung Duong", "VTD", 18, BigNumber.from(10).pow(19)], true);
+  await getEth(recipientAddress);
+  let recipicient: SignerWithAddress = await impersonateSomeone(recipientAddress);
 
-  //     console.log(await contract.totalSupply());
-  // let contract: FundDistribution = await deploy<FundDistribution>(deployer, 'FundDistribution', [], true);
-  await verifyContract('0xAF43450324ffa5337F3Bb069b3453782Ce6C3B27', []);
+  let preBalance: BigNumber = await hre.ethers.provider.getBalance(recipientAddress);
+  await distributor.connect(recipicient).claimEth(true);
+  let postBalance: BigNumber = await hre.ethers.provider.getBalance(recipientAddress);
 
-  // console.log(await contract.totalSupply());
-
-  // await contract.transfer("0xD9c9935f4BFaC33F38fd3A35265a237836b30Bd1", BigNumber.from(10).pow(18));
+  console.log(postBalance.sub(preBalance).toString());
 }
 
 main()
