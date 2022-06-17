@@ -53,16 +53,21 @@ async function main() : Promise<void> {
 
   await getEth(deployer.address);
   let recipientAddr = "0x06FFA0A5d417501045e0e199427e511583dD5386";
+  let antonAddr = "0x8Ed4389A31fe79d5EB76eF63a8477bfB0a39788b";
 
   let distributor = await getContractAt<Distributor>("Distributor", "0x0206BD99e19433F1F0c9503d0F39b7d0025B4377");
+
+  // await distributor.transferOwner(antonAddr);
+
   let amount = toWei(50,18);
 
   await distributor.depositETH({value: amount});
 
   await getEth(recipientAddr);
   let recipient = await impersonateSomeone(recipientAddr);
+  let Anton = await impersonateSomeone(antonAddr);
 
-  await distributor.approveETH(recipientAddr, amount);
+  await distributor.connect(Anton).approveETH(recipientAddr, amount);
 
   let preBalance = await hre.ethers.provider.getBalance(recipientAddr);
 
