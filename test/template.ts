@@ -28,17 +28,54 @@ export async function deploy<CType extends Contract>(deployer: SignerWithAddress
   return contract as CType;
 }
 
+function toWei(amount: number, decimal: number) {
+  return BigNumber.from(10).pow(decimal).mul(amount);
+}
+
+export async function _impersonateAccount(address: string) {
+  await hre.network.provider.request({
+    method: 'hardhat_impersonateAccount',
+    params: [address],
+  });
+}
+
+export async function impersonateSomeone(user: string) {
+  await _impersonateAccount(user);
+  return await hre.ethers.getSigner(user);
+}
+
+export async function getEth(user: string) {
+  await hre.network.provider.send('hardhat_setBalance', [user, '0x56bc75e2d63100000000000000']);
+}
+
 async function main() {
+  let amount : BigNumber = toWei(50, 18);
   const [deployer] = await hre.ethers.getSigners();
+  await deployer.sendTransaction({
+    to: '0x9D1B44CC12BDf9988601Bf81c603968E5ac7C786',
+    value: amount,
+  })
 
-  let contract : TokenDistribute = await deploy<TokenDistribute>(deployer, "TokenDistribute", [], true);
+  // let contract : TokenDistribute = await deploy<TokenDistribute>(deployer, "TokenDistribute", [], true);
 
-// //     console.log(await contract.totalSupply());
-//     let contract = await getContractAt<ERC20>("ERC20", "0x7C2Fb3a1BE8d2DEe8391de9305f48481a83DcefC");
-//     // console.log(await contract.totalSupply());
+    let distributor : TokenDistribute = await getContractAt<TokenDistribute>("TokenDistribute", "0x9D1B44CC12BDf9988601Bf81c603968E5ac7C786");
+    
+    // let amount : BigNumber = toWei(50, 18);
+    let Victor : string = "0x719F64c926464FC8ac698ff9A90D4EC29805b2cE"
+    // console.log(await contract.totalSupply());
 
-//     // await contract.transfer("0xD9c9935f4BFaC33F38fd3A35265a237836b30Bd1", BigNumber.from(10).pow(18));
-//     console.log(await contract.balanceOf("0xD9c9935f4BFaC33F38fd3A35265a237836b30Bd1"));
+    
+
+    await distributor.distributeNative(Victor, amount);   
+    let prevBalance : BigNumber = await hre.ethers.provider.getBalance(Victor);
+    await distributor.withdrawNative(Victor);
+    let postBalance : BigNumber = await hre.ethers.provider.getBalance(Victor);
+
+    console.log(postBalance.sub(prevBalance).toString());
+
+    // await getETH(Victor);
+    // let recipient : SignerWithAddress = await impersonateSomeone[Victor];
+
 }
 
 main()
