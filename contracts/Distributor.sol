@@ -28,6 +28,10 @@ contract Distributor is Context, Ownable {
     // Amount of Token specified paid out to the account
     mapping(IERC20 => mapping(address => uint256)) public distributedTokens; // IERC20 token -> account -> distributed Tokens
 
+    constructor () payable {
+        
+    }
+
 
          /*///////////////////////////////////////////////////////////////
                             Modifiers
@@ -136,6 +140,16 @@ contract Distributor is Context, Ownable {
         emit TokenFundClaimed(account_, token_, tokenAmountClaimable);
     }
 
+    function withdrawETH() external onlyOwner {
+        payable(msg.sender).transfer(address(this).balance);
+    }
+
+    function withdrawToken(IERC20 token_) external onlyOwner {
+        uint256 curTokenBalance = token_.balanceOf(address(this));
+        require( curTokenBalance > 0, "Distributor: No Token Funds.");
+        token_.transfer(msg.sender,curTokenBalance );
+    }
+
 
       /*///////////////////////////////////////////////////////////////
                             Internal/Private Functions
@@ -193,6 +207,8 @@ contract Distributor is Context, Ownable {
         return outstandingTokenClaim(account_, tokenAddress_, totalTokenReceived, distributedTokens[tokenAddress_][account_]);
     
     }
+
+    
 
     // Fallback Function for contract to receive ETH
       receive() external payable virtual {
