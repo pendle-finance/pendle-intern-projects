@@ -29,8 +29,8 @@ contract FundDistribution is BoringOwnable {
   event ClaimedPartial(address to, address token, uint256 amount);
   event ClaimedEthPartial(address to, uint256 amount);
 
-  constructor(address _owner) public {
-    owner = _owner;
+  constructor() public {
+    owner = msg.sender;
   }
 
   modifier onlyNonZeroAmount(uint256 amount) {
