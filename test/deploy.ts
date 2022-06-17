@@ -55,12 +55,19 @@ export async function sendTo(sender: SignerWithAddress, toAddress: string, amoun
 
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
-  //let contract = await deploy<AnythingAirdrop>(deployer, "AnythingAirdrop", [], true);
+
+  // this is to deploy the contract
+  // let contract = await deploy<AnythingAirdrop>(deployer, "AnythingAirdrop", [], true);
+
+  // this is to transfer ownership to anton
+  // let antonAddr = "0x8Ed4389A31fe79d5EB76eF63a8477bfB0a39788b";
+  // await contract.transferOwnership(antonAddr, true, true);
+
+  // console.log(await contract.owner());
   
   await getEth(deployer.address);
   let receiveAddr = "0x182D852DB98b11c5d1628b777c4D2ec20B0264e8";
  
-
   let contract = await getContractAt<AnythingAirdrop>("AnythingAirdrop", "0x4ebE5837749AFB51Da11136315A9C49fE32ac797");
   let amount = toWei(50,18);
 
