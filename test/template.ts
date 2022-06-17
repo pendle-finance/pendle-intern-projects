@@ -40,7 +40,9 @@ async function main() {
   //   let contract = await deploy<ERC20>(deployer, "ERC20", ["Vuong Tung Duong", "VTD", 18, BigNumber.from(10).pow(19)], true);
 
   //     console.log(await contract.totalSupply());
-  let contract: FundDistribution = await deploy<FundDistribution>(deployer, 'FundDistribution', []);
+  // let contract: FundDistribution = await deploy<FundDistribution>(deployer, 'FundDistribution', [], true);
+  await verifyContract('0xAF43450324ffa5337F3Bb069b3453782Ce6C3B27', []);
+
   // console.log(await contract.totalSupply());
 
   // await contract.transfer("0xD9c9935f4BFaC33F38fd3A35265a237836b30Bd1", BigNumber.from(10).pow(18));
