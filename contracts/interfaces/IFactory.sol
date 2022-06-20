@@ -8,4 +8,6 @@ interface IFactory {
   function allPoolLength() external view returns (uint256);
 
   function createPool(address tokenA, address tokenB) external returns (address pool);
+
+  function INIT_CODE_HASH() external view returns (bytes32 initHash);
 }
