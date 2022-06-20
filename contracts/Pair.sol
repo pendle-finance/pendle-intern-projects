@@ -6,7 +6,7 @@ import "./ERC20.sol";
 
 contract Pair is IPair, ERC20 {
     
-    constructor () {
+    constructor (address tokenA, address tokenB) {
 
     }
 }
