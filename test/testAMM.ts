@@ -63,8 +63,13 @@ describe("TestTokenDistribute", () => {
     await token0.transfer(myPair.address, 100);
     await token1.transfer(myPair.address, 100);
     await myPair.mint(admin.address);
+
+    await token0.connect(Alice).transfer(myPair.address, 100);
+    await token1.connect(Alice).transfer(myPair.address, 100);
+    await myPair.connect(Alice).mint(Alice.address);
+
     console.log(await myPair.balanceOf(admin.address));
-    console.log(await myPair.balanceOf(constants.AddressZero));
+    console.log(await myPair.balanceOf(Alice.address));
   });
 
 

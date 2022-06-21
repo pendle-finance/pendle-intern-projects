@@ -55,7 +55,7 @@ contract AMMPair is IAMMPair, ERC20 {
         return (0, 1);
     }
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external {
-
+        
     }
 
     function initialize(address _token0, address _token1) external {
