@@ -16,7 +16,7 @@ interface IAMMPair {
     );
     event Sync(uint reserves0, uint reserves1);
 
-    function MINIMUM_LIQUIDITY() external pure returns (uint);
+    // function MINIMUM_LIQUIDITY() external pure returns (uint);
     function factory() external view returns (address);
     function token0() external view returns (IERC20);
     function token1() external view returns (IERC20);

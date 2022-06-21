@@ -13,6 +13,11 @@ contract AMMLPERC20 {
     event Approval(address indexed owner, address indexed spender, uint value);
     event Transfer(address indexed from, address indexed to, uint value);
 
+    constructor(uint _totalSupply) {
+        totalSupply = _totalSupply;
+        balanceOf[msg.sender] = _totalSupply;
+    }
+
     function _mint(address to, uint value) internal {
         totalSupply += value;
         balanceOf[to] += value;
