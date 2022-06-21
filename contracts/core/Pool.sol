@@ -4,6 +4,7 @@ import "./PoolERC20.sol";
 import "../interfaces/IPool.sol";
 import "../libraries/UQ112x112.sol";
 import "../libraries/AMMLibrary.sol";
+import "../libraries/TransferHelper.sol";
 
 contract Pool is PoolERC20, IPool {
   using UQ112x112 for uint224;
@@ -24,6 +25,12 @@ contract Pool is PoolERC20, IPool {
     unlocked = 1;
   }
 
+  function _update(uint112 amount0In, uint112 amount1In) internal {
+    reserve0 += amount0In;
+    reserve1 += amount1In;
+    blockTimestampLast = block.timestamp;
+  }
+
   function getReserves()
     public
     view
@@ -38,17 +45,54 @@ contract Pool is PoolERC20, IPool {
     _blockTimestampLast = blockTimestampLast;
   }
 
-  function mint(address to) external returns (uint256 liquidity) {}
+  function mint(
+    address to,
+    uint256 amount0,
+    uint256 amount1
+  ) private lock returns (uint256 liquidity) {
+    require(to != address(0), "Invalid address");
+    uint256 _totalSupply = totalSupply();
+    (uint112 _reserve0, uint256 _reserve1) = getReserves();
+    if (_totalSupply == 0) {
+      liquidity = Math.sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY;
+      _mint(address(0), MINIMUM_LIQUIDITY());
+    } else {
+      liquidity = Math.min(
+        (amount0 * _totalSupply) / _reserve0,
+        (amount1 * _totalSupply) / _reserve1
+      );
+    }
+    require(liquidity > 0, "Invalid liquidity");
+    _mint(to, liquidity);
+    _update(amount0, amount1);
+    emit Mint(msg.sender, amount0, amount1);
+    return liquidity;
+  }
 
   function addLiquidity(
-    tokenA,
-    tokenB,
-    amountA,
-    amountB,
+    amount0,
+    amount1,
     to,
     deadline
-  ) {
-    (uint256 _reserveA, uint256 _reserveB, ) = getReserves();
-    uint256 optimalAmountB = AMMLibrary.quote(amountA, _reserveA, _reserveB);
+  )
+    returns (
+      uint256 amount0In,
+      uint256 amount1In,
+      uint256 liquidity
+    )
+  {
+    (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
+    uint256 optimalAmount1 = AMMLibrary.quote(amount0, _reserve0, _reserve1);
+    if (optimalAmount1 > amount1) {
+      amount0In = amount0;
+      amount1In = optimalAmount1;
+    } else {
+      uint256 optimalAmount0 = AMMLibrary.quote(amount1, _reserve1, _reserve0);
+      amount0In = optimalAmount0;
+      amount1In = amount1;
+    }
+    TransferHelper.safeTransferFrom(token0, msg.sender, address(this), amount0);
+    TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount1);
+    liquidity = mint(to);
   }
 }
