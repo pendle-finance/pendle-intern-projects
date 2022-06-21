@@ -7,6 +7,7 @@ interface ILPPair {
 
     event Mint(address indexed sender, uint amount0, uint amount1);
     event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
+    event Update(uint128 _reverse0,uint128 _reserve1,uint newReserve0,uint newReserve1);
     event Swap(
         address indexed sender,
         uint amount0In,

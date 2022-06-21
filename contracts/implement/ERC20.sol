@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 contract ERC20 is IERC20Metadata{
   using SafeMath for uint;
   
-  uint private totalBalance;
+  uint internal totalBalance;
   //address public owner;
-  mapping(address => uint) private balances;
+  mapping(address => uint) internal balances;
   mapping(address => mapping(address => uint)) private allowBalances;
   string public constant tokenName ="LP AMM";
   string public constant tokenSymbol = "LP";
