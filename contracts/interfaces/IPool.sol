@@ -28,8 +28,8 @@ interface IPool is IPoolERC20 {
     external
     view
     returns (
-      uint256 reserve0,
-      uint256 reserve1,
+      uint112 reserve0,
+      uint112 reserve1,
       uint32 blockTimestampLast
     );
 

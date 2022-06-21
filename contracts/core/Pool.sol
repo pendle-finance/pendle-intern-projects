@@ -2,12 +2,12 @@ pragma solidity ^0.8.0;
 
 import "./PoolERC20.sol";
 import "../interfaces/IPool.sol";
-import "../libraries/UQ112x112.sol";
+import "../interfaces/IFactory.sol";
 import "../libraries/AMMLibrary.sol";
 import "../libraries/TransferHelper.sol";
+import "../libraries/Math.sol";
 
 contract Pool is PoolERC20, IPool {
-  using UQ112x112 for uint224;
   uint256 public constant MINIMUM_LIQUIDITY = 10**3;
   address public factory;
   address public token0;
@@ -27,7 +27,7 @@ contract Pool is PoolERC20, IPool {
 
   constructor() {
     factory = msg.sender;
-    (token0, token1) = factory.params;
+    (token0, token1) = IFactory(factory).getParams();
   }
 
   function _update(
@@ -38,7 +38,7 @@ contract Pool is PoolERC20, IPool {
   ) internal {
     reserve0 += amount0In - amount0Out;
     reserve1 += amount1In - amount1Out;
-    blockTimestampLast = block.timestamp;
+    blockTimestampLast = uint32(block.timestamp % 2**32);
   }
 
   function getReserves()
@@ -57,15 +57,15 @@ contract Pool is PoolERC20, IPool {
 
   function mint(
     address to,
-    uint256 amount0,
-    uint256 amount1
+    uint112 amount0,
+    uint112 amount1
   ) private lock returns (uint256 liquidity) {
     require(to != address(0), "Invalid address");
-    uint256 _totalSupply = totalSupply();
-    (uint112 _reserve0, uint256 _reserve1) = getReserves();
+    uint256 totalSupply = _totalSupply;
+    (uint112 _reserve0, uint256 _reserve1, ) = getReserves();
     if (_totalSupply == 0) {
       liquidity = Math.sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY;
-      _mint(address(0), MINIMUM_LIQUIDITY());
+      _mint(address(0), MINIMUM_LIQUIDITY);
     } else {
       liquidity = Math.min(
         (amount0 * _totalSupply) / _reserve0,
@@ -80,11 +80,11 @@ contract Pool is PoolERC20, IPool {
   }
 
   function addLiquidity(
-    amount0,
-    amount1,
-    to,
-    deadline
+    uint256 amount0,
+    uint256 amount1,
+    address to
   )
+    external
     returns (
       uint256 amount0In,
       uint256 amount1In,
@@ -103,19 +103,18 @@ contract Pool is PoolERC20, IPool {
     }
     TransferHelper.safeTransferFrom(token0, msg.sender, address(this), amount0);
     TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount1);
-    liquidity = mint(to);
+    liquidity = mint(to, uint112(amount0), uint112(amount1));
   }
 
   function removeLiquidity(
     uint256 liquidity,
     uint256 amount0Min,
     uint256 amount1Min,
-    address to,
-    uint256 deadline
+    address to
   ) external returns (uint256 amount0, uint256 amount1) {
     require(liquidity > 0, "Invalid liquidity");
-    require(liquidity < balanceOf(msg.sender), "Invalid liquidity");
-    uint256 _totalSupply = totalSupply();
+    require(liquidity < _balances[msg.sender], "Invalid liquidity");
+    uint256 totalSupply = _totalSupply;
     uint256 balance0 = IERC20(token0).balanceOf(address(this));
     uint256 balance1 = IERC20(token1).balanceOf(address(this));
     amount0 = (liquidity / _totalSupply) * balance0;
@@ -125,7 +124,7 @@ contract Pool is PoolERC20, IPool {
     _burn(msg.sender, liquidity);
     TransferHelper.safeTransfer(token0, to, amount0);
     TransferHelper.safeTransfer(token1, to, amount1);
-    _update(0, 0, amount0, amount1);
+    _update(0, 0, uint112(amount0), uint112(amount1));
     emit Burn(msg.sender, amount0, amount1, to);
   }
 
