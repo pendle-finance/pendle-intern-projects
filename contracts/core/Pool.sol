@@ -91,6 +91,10 @@ contract Pool is PoolERC20, IPool {
       uint256 liquidity
     )
   {
+    require(
+      uint112(amount0) == uint256(amount0) && uint112(amount1) == uint256(amount1),
+      "Pool: Invalid Amount Given"
+    );
     (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
     uint256 optimalAmount1 = AMMLibrary.quote(amount0, _reserve0, _reserve1);
     if (optimalAmount1 > amount1) {
