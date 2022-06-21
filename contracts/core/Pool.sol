@@ -130,8 +130,33 @@ contract Pool is PoolERC20, IPool {
   }
 
   function swapExactIn(
-    uint256 amountAIn,
-    uint256 amountBIn,
+    address token,
+    uint256 amountIn,
     address to
-  ) {}
+  ) {
+    (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
+    uint256 reserveIn = (token == token0) ? _reserve0 : _reserve1;
+    uint256 reserveOut = (token == token0) ? _reserve1 : _reserve0;
+    address tokenIn = (token == token0) ? token0 : token1;
+    address tokenOut = (token == token0) ? token1 : token0;
+
+    uint256 amountOut = AMMLibrary.getAmountOut(amountIn, reserveIn, reserveOut, 0);
+    TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), amountIn);
+    TransferHelper.safeTransfer(tokenOut, to, amountOut);
+  }
+
+  function swapExactOut(
+    address token,
+    uint256 amountOut,
+    uint256 to
+  ) {
+    (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
+    uint256 reserveIn = (token == token0) ? _reserve1 : _reserve0;
+    uint256 reserveOut = (token == token0) ? _reserve0 : _reserve1;
+    uint256 amountIn = AMMLibrary.getAmountIn(amountOut, _reserve0, _reserve1, 0);
+    address tokenIn = (token == token0) ? token1 : token0;
+    address tokenOut = (token == token0) ? token0 : token1;
+    TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), amountIn);
+    TransferHelper.safeTransfer(tokenOut, to, amountOut);
+  }
 }
