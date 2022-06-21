@@ -1,30 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface IPair {
-    event Approval(address indexed owner, address indexed spender, uint value);
-    event Transfer(address indexed from, address indexed to, uint value);
+import "./IERC20Metadata.sol";
 
-    function name() external pure returns (string memory);
-    function symbol() external pure returns (string memory);
-    function decimals() external pure returns (uint8);
-    function totalSupply() external view returns (uint);
-    function balanceOf(address owner) external view returns (uint);
-    function allowance(address owner, address spender) external view returns (uint);
-
-    function approve(address spender, uint value) external returns (bool);
-    function transfer(address to, uint value) external returns (bool);
-    function transferFrom(address from, address to, uint value) external returns (bool);
-
+interface IPair is IERC20Metadata {
     event Mint(address indexed sender, uint amount0, uint amount1);
-    event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
+    event Burn(address indexed sender, uint amount0, uint amount1);
     event Swap(
         address indexed sender,
         uint amount0In,
         uint amount1In,
         uint amount0Out,
-        uint amount1Out,
-        address indexed to
+        uint amount1Out
     );
 
     event Sync(uint112 reserve0, uint112 reserve1);
@@ -36,10 +23,8 @@ interface IPair {
     function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
     function kLast() external view returns (uint);
 
-    function mint(address to) external returns (uint liquidity);
-    function burn(address to) external returns (uint amount0, uint amount1);
-    function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external;
+    function mint(uint amount0In, uint amount1In) external;
+    function burn(uint amount0Out, uint amount1Out) external;
+    function swap(uint amount0In, uint amount1In, uint amount0Out, uint amount1Out) external;
     function sync() external;
-
-    function initialize(address, address) external;
 }
