@@ -91,6 +91,10 @@ library AMMLibrary {
     amountIn = (numerator / denominator) + (1);
   }
 
+  function min(uint256 amount0, uint256 amount1) internal pure returns (uint256 minAmount) {
+    minAmount = amount0 < amount1 ? amount0 : amount1;
+  }
+
   // No pathing planned to be implemented yet
   //   // performs chained getAmountOut calculations on any number of pairs
   //   function getAmountsOut(
