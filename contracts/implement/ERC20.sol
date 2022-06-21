@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.11;
 
-import "./interface/IERC20Metadata.sol";
+import "../interface/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 contract ERC20 is IERC20Metadata{
   using SafeMath for uint;
@@ -10,22 +10,14 @@ contract ERC20 is IERC20Metadata{
   //address public owner;
   mapping(address => uint) private balances;
   mapping(address => mapping(address => uint)) private allowBalances;
-  string private tokenName;
-  string private tokenSymbol;
-  uint8 private tokenDecimal;
+  string public constant tokenName ="LP AMM";
+  string public constant tokenSymbol = "LP";
+  uint8 public constant tokenDecimal = 18;
 
   // function owners() external view returns (address) {
   //   return owner;
   // }
 
-  constructor(uint value, string memory _name, string memory _symbol, uint8 _decimal){
-    //owner = msg.sender;
-    totalBalance = value;
-    balances[msg.sender] = value;
-    tokenName = _name;
-    tokenSymbol = _symbol;
-    tokenDecimal = _decimal;
-  }
   function totalSupply() external view returns (uint256) {
     return totalBalance;
   }
@@ -77,15 +69,28 @@ contract ERC20 is IERC20Metadata{
     return true;
   }
 
-  function name() external view returns (string memory) {
+  function name() external  pure returns (string memory) {
     return tokenName;
   }
 
-  function symbol() external view returns (string memory) {
+  function symbol() external  pure returns (string memory) {
     return tokenSymbol;
   }
 
-  function decimals() external view returns (uint8) {
+  function decimals() external pure returns (uint8) {
     return tokenDecimal;
+  }
+
+  function _mint(address to, uint value) internal {
+      totalBalance = totalBalance.add(value);
+      balances[to] = balances[to].add(value);
+      emit Transfer(address(0), to, value);
+  }
+
+
+  function _burn(address from, uint value) internal {
+      balances[from] = balances[from].sub(value);
+      totalBalance = totalBalance.sub(value);
+      emit Transfer(from, address(0), value);
   }
 }
