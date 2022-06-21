@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.11;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 interface IAMMFactory {
-    // event PairCreated(address indexed token0, address indexed token1, address pair, uint);
+     // Events:
+    event PairCreated(IERC20 indexed, IERC20 indexed, address indexed, uint256);
 
-    // function getPair(address tokenA, address tokenB) external view returns (address pair);
-    // function allPairs(uint) external view returns (address pair);
+    // View Functions:
+    function getPair(IERC20 tokenA, IERC20 tokenB) external view returns(address pair);
+    function pairByIndex(uint256) external view returns (address pair);
     function allPairsLength() external view returns (uint);
 
-    function createPair(address tokenA, address tokenB) external returns (address pair);
+
+    // External Functions
+ function createPair(IERC20 tokenA, IERC20 tokenB) external returns (address pair);
 }
