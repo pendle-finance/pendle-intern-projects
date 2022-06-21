@@ -97,7 +97,6 @@ contract PoolERC20 is IPoolERC20 {
   }
 
   function _mint(address to, uint256 amount) internal {
-    require(to != address(0), "PE20: Invalid recipient");
     //increase total supply
     _totalSupply += amount;
     //increase balance of the recipient
@@ -105,16 +104,16 @@ contract PoolERC20 is IPoolERC20 {
     emit Transfer(address(0), to, amount);
   }
 
-  function _burn(uint256 amount) internal {
+  function _burn(address to, uint256 amount) internal {
     //check if the amount is greater than the balance of the sender
-    require(_balances[msg.sender] >= amount, "PE20: Not enough balance");
+    require(_balances[to] >= amount, "PE20: Not enough balance");
     //decrease the total supply
     _totalSupply -= amount;
     //decrease the balance of the sender
     unchecked {
-      _balances[msg.sender] -= amount;
+      _balances[to] -= amount;
     }
-    emit Transfer(msg.sender, address(0), amount);
+    emit Transfer(to, address(0), amount);
   }
 
   function permit(
