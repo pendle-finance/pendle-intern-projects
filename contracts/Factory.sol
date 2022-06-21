@@ -23,7 +23,7 @@ contract Factory is IFactory {
         require(token0 != address(0), "Invalid token address");
         require(pairMapping[token0][token1] == address(0), "Pair exists");
 
-        newPair = address(new Pair(token0, token1));
+        newPair = address(new Pair(token0, token1, "name", "symbol"));
         allPairs.push(newPair);
         pairMapping[token0][token1] = newPair;
         pairMapping[token1][token0] = newPair;

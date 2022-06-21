@@ -27,11 +27,11 @@ contract ERC20 is IERC20Metadata{
     symbol = _symbol;
   }
 
-  function balanceOf(address account) external view returns (uint256) {
+  function balanceOf(address account) public view returns (uint256) {
     return ownership[account];
   }
 
-  function transfer(address to, uint256 amount) external validAddress(to) returns (bool) {
+  function transfer(address to, uint256 amount) public validAddress(to) returns (bool) {
     require(ownership[msg.sender] >= amount, "Insufficient balance");
     ownership[msg.sender] -= amount;
     ownership[to] += amount;
@@ -39,11 +39,11 @@ contract ERC20 is IERC20Metadata{
     return true;
   }
 
-  function allowance(address owner, address spender) external view returns (uint256) {
+  function allowance(address owner, address spender) public view returns (uint256) {
     return allowances[owner][spender];
   }
 
-  function approve(address spender, uint256 amount) external validAddress(spender) returns (bool) {
+  function approve(address spender, uint256 amount) public validAddress(spender) returns (bool) {
     allowances[msg.sender][spender] = amount;
     emit Approval(msg.sender, spender, amount);
     return true;
@@ -53,7 +53,7 @@ contract ERC20 is IERC20Metadata{
     address from,
     address to,
     uint256 amount
-  ) external validAddress(from) validAddress(to) returns (bool) {
+  ) public validAddress(from) validAddress(to) returns (bool) {
     require(allowances[from][msg.sender] >= amount, "Spender not approved");
     require(ownership[from] >= amount, "Insufficient balance");
     ownership[from] -= amount;
@@ -62,12 +62,12 @@ contract ERC20 is IERC20Metadata{
     return true;
   }
 
-  function mint(address to, uint256 amount) external validAddress(to) {
+  function mint(address to, uint256 amount) internal validAddress(to) {
     ownership[to] += amount;
     emit Mint(to, amount);
   }
 
-  function burn(address from, uint256 amount) external validAddress(from) {
+  function burn(address from, uint256 amount) internal validAddress(from) {
     require(ownership[from] >= amount, "Insufficient balance");
     ownership[from] -= amount;
     emit Burn(from, amount);
