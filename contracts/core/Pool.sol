@@ -25,9 +25,19 @@ contract Pool is PoolERC20, IPool {
     unlocked = 1;
   }
 
-  function _update(uint112 amount0In, uint112 amount1In) internal {
-    reserve0 += amount0In;
-    reserve1 += amount1In;
+  constructor() {
+    factory = msg.sender;
+    (token0, token1) = factory.params;
+  }
+
+  function _update(
+    uint112 amount0In,
+    uint112 amount1In,
+    uint112 amount0Out,
+    uint112 amount1Out
+  ) internal {
+    reserve0 += amount0In - amount0Out;
+    reserve1 += amount1In - amount1Out;
     blockTimestampLast = block.timestamp;
   }
 
@@ -64,7 +74,7 @@ contract Pool is PoolERC20, IPool {
     }
     require(liquidity > 0, "Invalid liquidity");
     _mint(to, liquidity);
-    _update(amount0, amount1);
+    _update(amount0, amount1, 0, 0);
     emit Mint(msg.sender, amount0, amount1);
     return liquidity;
   }
@@ -95,4 +105,33 @@ contract Pool is PoolERC20, IPool {
     TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount1);
     liquidity = mint(to);
   }
+
+  function removeLiquidity(
+    uint256 liquidity,
+    uint256 amount0Min,
+    uint256 amount1Min,
+    address to,
+    uint256 deadline
+  ) external returns (uint256 amount0, uint256 amount1) {
+    require(liquidity > 0, "Invalid liquidity");
+    require(liquidity < balanceOf(msg.sender), "Invalid liquidity");
+    uint256 _totalSupply = totalSupply();
+    uint256 balance0 = IERC20(token0).balanceOf(address(this));
+    uint256 balance1 = IERC20(token1).balanceOf(address(this));
+    amount0 = (liquidity / _totalSupply) * balance0;
+    amount1 = (liquidity / _totalSupply) * balance1;
+    require(amount0 >= amount0Min, "Invalid liquidity");
+    require(amount1 >= amount1Min, "Invalid liquidity");
+    _burn(msg.sender, liquidity);
+    TransferHelper.safeTransfer(token0, to, amount0);
+    TransferHelper.safeTransfer(token1, to, amount1);
+    _update(0, 0, amount0, amount1);
+    emit Burn(msg.sender, amount0, amount1, to);
+  }
+
+  function swapExactIn(
+    uint256 amountAIn,
+    uint256 amountBIn,
+    address to
+  ) {}
 }
