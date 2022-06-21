@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "./IPair.sol";
 import "./ERC20.sol";
 
-contract Pair is IPair, ERC20 {
+contract Pair {
     
     constructor (address tokenA, address tokenB) {
 
