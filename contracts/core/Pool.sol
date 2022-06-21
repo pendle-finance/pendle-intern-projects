@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 import "./PoolERC20.sol";
 import "../interfaces/IPool.sol";
 import "../libraries/UQ112x112.sol";
+import "../libraries/AMMLibrary.sol";
 
 contract Pool is PoolERC20, IPool {
   using UQ112x112 for uint224;
@@ -38,4 +39,16 @@ contract Pool is PoolERC20, IPool {
   }
 
   function mint(address to) external returns (uint256 liquidity) {}
+
+  function addLiquidity(
+    tokenA,
+    tokenB,
+    amountA,
+    amountB,
+    to,
+    deadline
+  ) {
+    (uint256 _reserveA, uint256 _reserveB, ) = getReserves();
+    uint256 optimalAmountB = AMMLibrary.quote(amountA, _reserveA, _reserveB);
+  }
 }
