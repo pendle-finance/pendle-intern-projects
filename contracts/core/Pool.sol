@@ -6,9 +6,11 @@ import "../interfaces/IFactory.sol";
 import "../libraries/AMMLibrary.sol";
 import "../libraries/TransferHelper.sol";
 import "../libraries/Math.sol";
+import "../interfaces/IWETH.sol";
 
 contract Pool is PoolERC20 {
   uint256 public constant MINIMUM_LIQUIDITY = 10**3;
+  bool public constant isETH;
   address public factory;
   address public token0;
   address public token1;
@@ -17,18 +19,18 @@ contract Pool is PoolERC20 {
   uint112 private reserve1;
   uint32 private blockTimestampLast;
 
-  uint256 private unlocked = 1;
+  uint8 private unlocked = 1;
 
-  event Mint(address indexed sender, uint256 amount0, uint256 amount1);
+  event Mint(address indexed sender, uint112 amount0, uint112 amount1);
 
-  event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
+  event Burn(address indexed sender, uint112 amount0, uint112 amount1, address indexed to);
 
   event Swap(
     address indexed sender,
-    uint256 amount0In,
-    uint256 amount1In,
-    uint256 amount0Out,
-    uint256 amount1Out,
+    uint112 amount0In,
+    uint112 amount1In,
+    uint112 amount0Out,
+    uint112 amount1Out,
     address indexed to
   );
 
@@ -44,9 +46,15 @@ contract Pool is PoolERC20 {
     _;
   }
 
+  modifier onlyValidToken(address token) {
+    require(token == token0 || token == token1, "INVALID TOKEN");
+    _;
+  }
+
   constructor() {
     factory = msg.sender;
-    (token0, token1) = IFactory(factory).getParams();
+    (token0, token1, isETH) = IFactory(factory).getParams();
+    _mint(address(0), MINIMUM_LIQUIDITY, true);
   }
 
   function _update(
@@ -78,13 +86,11 @@ contract Pool is PoolERC20 {
     address to,
     uint112 amount0,
     uint112 amount1
-  ) private lock returns (uint256 liquidity) {
-    require(to != address(0), "Invalid address");
+  ) private lock nonZeroAddress(to) returns (uint256 liquidity) {
     uint256 totalSupply = _totalSupply;
     (uint112 _reserve0, uint256 _reserve1, ) = getReserves();
-    if (_totalSupply == 0) {
-      liquidity = Math.sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY;
-      _mint(address(0), MINIMUM_LIQUIDITY);
+    if (_totalSupply == MINIMUM_LIQUIDITY) {
+      liquidity = Math.sqrt(amount0 * amount1);
     } else {
       liquidity = Math.min(
         (amount0 * _totalSupply) / _reserve0,
@@ -92,10 +98,23 @@ contract Pool is PoolERC20 {
       );
     }
     require(liquidity > 0, "Invalid liquidity");
-    _mint(to, liquidity);
+    _mint(to, liquidity, false);
     _update(amount0, amount1, 0, 0);
     emit Mint(msg.sender, amount0, amount1);
     return liquidity;
+  }
+
+  function _addLiquidity(uint112 amount0, uint112 amount1) internal returns (uint112, uint112) {
+    require(amount0 > 0, "POOL: INVALID AMOUNT0");
+    require(amount1 > 0, "POOL: INVALID AMOUNT1");
+    (uint112 _reserve0, uint112 _reserve1, ) = getReserves();
+    uint112 optimalAmount1 = uint112(AMMLibrary.quote(amount0, _reserve0, _reserve1));
+    if (optimalAmount1 <= amount1) {
+      return (amount0, optimalAmount1);
+    } else {
+      uint112 optimalAmount0 = uint112(AMMLibrary.quote(amount1, _reserve1, _reserve0));
+      return (optimalAmount0, amount1);
+    }
   }
 
   function addLiquidity(
@@ -106,35 +125,43 @@ contract Pool is PoolERC20 {
     external
     nonZeroAddress(to)
     returns (
-      uint256 amount0In,
-      uint256 amount1In,
-      uint256 liquidity
+      uint112 amount0In,
+      uint112 amount1In,
+      uint112 liquidity
     )
   {
-    require(amount0 > 0, "POOL: INVALID AMOUNT0");
-    require(amount1 > 0, "POOL: INVALID AMOUNT1");
-
-    (uint112 _reserve0, uint112 _reserve1, ) = getReserves();
-    uint112 optimalAmount1 = uint112(AMMLibrary.quote(amount0, _reserve0, _reserve1));
-    if (optimalAmount1 > amount1) {
-      amount0In = amount0;
-      amount1In = optimalAmount1;
-    } else {
-      uint112 optimalAmount0 = uint112(AMMLibrary.quote(amount1, _reserve1, _reserve0));
-      amount0In = optimalAmount0;
-      amount1In = amount1;
-    }
-    TransferHelper.safeTransferFrom(token0, msg.sender, address(this), amount0);
-    TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount1);
-    liquidity = mint(to, amount0, amount1);
+    (amount0In, amount1In) = _addLiquidity(amount0, amount1);
+    TransferHelper.safeTransferFrom(token0, msg.sender, address(this), amount0In);
+    TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount1In);
+    liquidity = mint(to, amount0In, amount1In);
   }
 
-  function removeLiquidity(
+  function addLiquidityEth(uint112 amount, address to)
+    external
+    payable
+    nonZeroAddress(to)
+    lock
+    returns (
+      uint112 amountEth,
+      uint112 amountToken,
+      uint112 liquidity
+    )
+  {
+    require(isETH, "Pool: Not a ETH pool");
+    (amountEth, amountToken) = _addLiquidity(msg.value, amount);
+    if (amountEth < msg.value) {
+      payable(msg.sender).transfer(msg.value - amountEth);
+    }
+    IWETH(token0).deposit{value: amountEth}();
+    TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amountToken);
+    liquidity = mint(to, amountEth, amountToken);
+  }
+
+  function _removeLiquidity(
     uint112 liquidity,
     uint112 amount0Min,
-    uint112 amount1Min,
-    address to
-  ) external nonZeroAddress(to) returns (uint112 amount0, uint112 amount1) {
+    uint112 amount1Min
+  ) internal returns (uint112 amount0, uint112 amount1) {
     require(liquidity > 0, "POOL: INVALID LIQUIDITY");
     require(liquidity < _balances[msg.sender], "POOL: INVALID LIQUIDITY");
     uint112 totalSupply = uint112(_totalSupply);
@@ -145,10 +172,33 @@ contract Pool is PoolERC20 {
     require(amount0 >= amount0Min, "POOl: INVALID LIQUIDITY");
     require(amount1 >= amount1Min, "POOL: INVALID LIQUIDITY");
     _burn(msg.sender, liquidity);
+  }
+
+  function removeLiquidity(
+    uint112 liquidity,
+    uint112 amount0Min,
+    uint112 amount1Min,
+    address to
+  ) external nonZeroAddress(to) returns (uint112 amount0, uint112 amount1) {
+    (amount0, amount1) = _removeLiquidity(liquidity, amount0Min, amount1Min);
     TransferHelper.safeTransfer(token0, to, amount0);
     TransferHelper.safeTransfer(token1, to, amount1);
     _update(0, 0, uint112(amount0), uint112(amount1));
     emit Burn(msg.sender, amount0, amount1, to);
+  }
+
+  function removeLiquidityEth(
+    uint112 liquidity,
+    uint112 amountEthMin,
+    uint112 amountTokenMin,
+    address to
+  ) external nonZeroAddress(to) returns (uint112 amountEth, uint112 amountToken) {
+    (amountEth, amountToken) = _removeLiquidity(liquidity, amountEthMin, amountTokenMin);
+    IWETH(token0).withdraw(amountEth);
+    payable(to).transfer(amountEth);
+    TransferHelper.safeTransfer(token1, to, amountToken);
+    _update(0, 0, uint112(amountEth), uint112(amountToken));
+    emit Burn(msg.sender, amountEth, amountToken, to);
   }
 
   ///@dev Your flash swap, might as well make all swaps use a flash swap since we're at it
@@ -201,13 +251,12 @@ contract Pool is PoolERC20 {
     address token,
     uint112 amountIn,
     address to
-  ) external nonZeroAddress(to) {
+  ) external nonZeroAddress(to) onlyValidToken(token) {
     (uint112 _reserve0, uint112 _reserve1, ) = getReserves();
     uint112 reserveIn = (token == token0) ? _reserve0 : _reserve1;
     uint112 reserveOut = (token == token0) ? _reserve1 : _reserve0;
     address tokenIn = (token == token0) ? token0 : token1;
     address tokenOut = (token == token0) ? token1 : token0;
-
     uint112 amountOut = uint112(AMMLibrary.getAmountOut(amountIn, reserveIn, reserveOut, 0));
     require(amountOut < reserveOut, "POOL: INSUFFICIENT LIQUIDITY");
     TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), amountIn);
@@ -219,7 +268,7 @@ contract Pool is PoolERC20 {
     address token,
     uint112 amountOut,
     address to
-  ) external nonZeroAddress(to) {
+  ) external nonZeroAddress(to) onlyValidToken(token) {
     (uint112 _reserve0, uint112 _reserve1, ) = getReserves();
     uint112 reserveIn = (token == token0) ? _reserve1 : _reserve0;
     uint112 reserveOut = (token == token0) ? _reserve0 : _reserve1;

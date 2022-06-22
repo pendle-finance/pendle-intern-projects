@@ -96,8 +96,12 @@ contract PoolERC20 is IPoolERC20 {
     emit Approval(approver, spender, amount);
   }
 
-  function _mint(address to, uint256 amount) internal {
-    require(to != address(0), "PE20: Invalid recipient");
+  function _mint(
+    address to,
+    uint256 amount,
+    bool allowZeroAddress
+  ) internal {
+    require(allowZeroAddress || to != address(0), "PE20: Invalid recipient");
     //increase total supply
     _totalSupply += amount;
     //increase balance of the recipient
