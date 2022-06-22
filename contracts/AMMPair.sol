@@ -55,7 +55,7 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
     // Lock up Minimum Liquidty:
 
     if (curtotalSupply == 0) {
-      lpLiquidity = contributedAmt0 * contributedAmt1 - MINIMUM_LIQUIDITY;
+      lpLiquidity = Math.sqrt(contributedAmt0 * contributedAmt1) - MINIMUM_LIQUIDITY;
       _mint(address(0), MINIMUM_LIQUIDITY);
     } else {
       uint256 lpAmount0 = (contributedAmt0 * curtotalSupply) / _reserves0;
@@ -72,14 +72,14 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
     emit Mint(msg.sender, contributedAmt0, contributedAmt1);
   }
 
-  // @Desc: External call to add liquidity to the pool
+  // @Desc: External call to add liquidity to the pool - NOTE: requires msg.sender to approve allowance for the contract to transact on the LP's behalf
   function addLiquidity(uint desiredAmtA, uint desiredAmtB, uint minAmtA, uint minAmtB) external virtual returns(uint amountA, uint amountB, uint lpLiquidity){
     // Calculate final amount of tokenA and tokenB to deposit:
     (amountA, amountB) = _addLiquidity(desiredAmtA, desiredAmtB, minAmtA, minAmtB);
 
     // Transfer both tokens to the Pair contract:
-    token0.transfer( address(this), amountA);
-    token1.transfer( address(this), amountB);
+    token0.transferFrom( msg.sender, address(this), amountA);
+    token1.transferFrom( msg.sender, address(this), amountB);
 
     lpLiquidity = _mintLP(msg.sender);
   }

@@ -6,6 +6,7 @@ import { AMMLPERC20, AMMFactory, AMMPair, TokenA, TokenB, IERC20 } from "../type
 // import "hardhat/console.sol";
 import hre from 'hardhat';
 import { Address } from "cluster";
+import { ZERO } from "./helpers/Constants";
 
 export async function getContractAt<CType extends Contract>(abiType: string, address: string) {
     return (await hre.ethers.getContractAt(abiType, address)) as CType;
@@ -36,12 +37,12 @@ describe("AMM Test", () => {
     myPair = await getContractAt<AMMPair>("AMMPair", await myFactory.allPairs(0)); 
 
    
-    // admin will receive 100,000 of tokenA and tokenB when both contracts are deployed, transfer 1000 to Alice and Bob each
-    await token0.transfer(Alice.address, 1000)
-    await token0.transfer(Bob.address, 1000)
+    // admin will receive 100,000 of tokenA and tokenB when both contracts are deployed, transfer 10,000 to Alice and Bob each
+    await token0.transfer(Alice.address, 10000)
+    await token0.transfer(Bob.address, 10000)
 
-    await token1.transfer(Alice.address, 1000);
-    await token1.transfer(Bob.address, 1000);
+    await token1.transfer(Alice.address, 10000);
+    await token1.transfer(Bob.address, 10000);
     
     snapshotId = await evm_snapshot();
   });
@@ -69,43 +70,64 @@ describe("AMM Test", () => {
  })
 
  describe("TokenA & TokenB Pre-Initialisation Status",()=> {
-  it("should TRANSFER both Alice and Bob 1000 worth of Token A", async () => {
+  it("should TRANSFER both Alice and Bob 10,000 worth of Token A", async () => {
       aliceBalance = await token0.balanceOf(Alice.address);
       bobBalance = await token0.balanceOf(Bob.address);
 
-      expect(aliceBalance).to.be.eq(BigNumber.from(1000));
-      expect(bobBalance).to.be.eq(BigNumber.from(1000));
+      expect(aliceBalance).to.be.eq(BigNumber.from(10000));
+      expect(bobBalance).to.be.eq(BigNumber.from(10000));
   });
 
-  it("should TRANSFER both Alice and Bob 1000 worth of Token B", async () => {
+  it("should TRANSFER both Alice and Bob 10,000 worth of Token B", async () => {
     aliceBalance = await token1.balanceOf(Alice.address);
     bobBalance = await token1.balanceOf(Bob.address);
 
-    expect(aliceBalance).to.be.eq(BigNumber.from(1000));
-    expect(bobBalance).to.be.eq(BigNumber.from(1000));
+    expect(aliceBalance).to.be.eq(BigNumber.from(10000));
+    expect(bobBalance).to.be.eq(BigNumber.from(10000));
 });
 
  })
 
-  // describe("AMM Pair Contract", () => {
-  //   it("mint successfully", async () => {
-  //     // admin first mints
-  //     await token0.transfer(myPair.address, 100);
-  //     await token1.transfer(myPair.address, 100);
-  //     await myPair.mint(admin.address);
-  
-  //     console.log(await myPair.reserve0(), await myPair.reserve1());
-  
-  //     // Alice mints
-  //     await token0.connect(Alice).transfer(myPair.address, 100);
-  //     await token1.connect(Alice).transfer(myPair.address, 100);
-  //     await myPair.connect(Alice).mint(Alice.address);
-      
-  //     console.log(await myPair.reserve0(), await myPair.reserve1());
-  
-  //     console.log(await myPair.balanceOf(admin.address));
-  //     console.log(await myPair.balanceOf(Alice.address));
-  //   });
+ describe("AMM Pair Contract Initialisation Status", () => {
+  it("should REGISTER token A and token B as token0 and token1", async () => {
+    let token0Addr = await myPair.token0()
+    expect(token0Addr).to.be.eq(token0.address);
+
+    let token1Addr = await myPair.token1();
+    expect(token1Addr).to.be.eq(token1.address);
+
+ })
+
+ it("should INITIALISE both reserves as empty", async () => {
+  let reserve0Amt = await myPair.reserve0();
+  expect(reserve0Amt).to.be.eq(ZERO);
+
+  let reserve1Amt = await myPair.reserve1();
+  expect(reserve1Amt).to.be.eq(ZERO);
+})
+})
+
+  describe("AMM Pair Contract Procedures", () => {
+    it("should ALLOW Liquidity Provider to successfully add liquidity (10,000 tokenA, 10,000 tokenB) and receive (10,000 - 1000 = 9000) LP tokens", async () => {
+      await token0.approve(myPair.address, 100000);
+      await token1.approve(myPair.address, 100000);
+      await myPair.addLiquidity(10000,10000,10000,10000);
+
+    });
+
+    it("should EMIT Mint event when a liquidity provider successfully adds liquidity to the pool", async () => {
+      await token0.approve(myPair.address, 100000);
+      await token1.approve(myPair.address, 100000);
+      await expect(myPair.addLiquidity(10000,10000,10000,10000)).to.emit(myPair, 'Mint').withArgs(admin.address, 10000, 10000);
+
+    });
+
+    it("should REVERT when a Liquidity Provider to successfully add liquidity (1000 tokenA, 1000 tokenB) since its lower than the minimum liquidity threshold.", async () => {
+      await token0.approve(myPair.address, 100000);
+      await token1.approve(myPair.address, 100000);
+     
+     await expect(myPair.addLiquidity(1000,1000,1000,1000)).to.be.revertedWith("Insufficient liquidity");
+    });
   
   //   it("burn successfully", async () => {
   //     await myPair.connect(Alice).transfer(myPair.address, 100);
@@ -120,7 +142,7 @@ describe("AMM Test", () => {
   
   //     console.log(await token0.balanceOf(Alice.address), await token1.balanceOf(Alice.address));
   //   });
-  // })
+  })
 
 
 });
