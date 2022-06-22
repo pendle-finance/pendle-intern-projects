@@ -254,11 +254,8 @@ contract Pool is IPool, PoolERC20 {
       ? balance1 - (_reserve1 - amount1Out)
       : 0;
     require(amount0In > 0 || amount1In > 0, "Pool: INSUFFICIENT_INPUT_AMOUNT");
-    require(
-      balance0 * balance1 >= _reserve0 * _reserve1,
-      "Pool: K"
-    );
-    
+    require(balance0 * balance1 >= _reserve0 * _reserve1, "Pool: K");
+
     //The change in reserve0 after a flash swap will be balance0 - reserve0, regardless of how much was optimistically "withdrawn" at the start
     //update this way means reserve0 += balance0 - reserve0 and reserve1 += balance1 - reserve1
     _update(balance0, balance1, reserve0, reserve1);
@@ -280,7 +277,7 @@ contract Pool is IPool, PoolERC20 {
     if (tokenOut == token0) swap(amountIn, 0, to);
     else swap(0, amountIn, to);
   }
-  
+
   //Assumption: token0 is ETH, so when you transfer to the user, always transfer token1
   function swapExactInEthForToken(address to)
     external
@@ -294,9 +291,8 @@ contract Pool is IPool, PoolERC20 {
     require(amountOut < _reserve1, "POOL: INSUFFICIENT LIQUIDITY");
     IWETH(token0).deposit{value: msg.value}();
     swap(0, msg.value, to);
-    
   }
-  
+
   //swap function is useless here: no multiple swap paths + need to unwrap and give ETH
   function swapExactInTokenForEth(uint256 amount, address to)
     external
@@ -343,7 +339,7 @@ contract Pool is IPool, PoolERC20 {
     swap(0, amount, to);
     TransferHelper.safeTransfer(token1, to, amount);
   }
-  
+
   //swap function is useless here: no multiple swap paths + need to unwrap and give ETH
   function swapExactOutTokenForEth(uint256 amount, address to)
     external
@@ -358,7 +354,11 @@ contract Pool is IPool, PoolERC20 {
   }
 
   //Assumption: token 0 is WETH, thus token1 must be the other token
-  function _takeTokenTransferEth(address to, uint256 amountIn, uint256 amountOut) private {
+  function _takeTokenTransferEth(
+    address to,
+    uint256 amountIn,
+    uint256 amountOut
+  ) private {
     TransferHelper.safeTransferFrom(token1, msg.sender, to, amountIn);
     IWETH(token0).withdraw(amountOut);
     payable(to).transfer(amountOut);
@@ -367,6 +367,7 @@ contract Pool is IPool, PoolERC20 {
 
   function _findWhichToken(address token)
     internal
+    view
     returns (
       uint256 reserveIn,
       uint256 reserveOut,

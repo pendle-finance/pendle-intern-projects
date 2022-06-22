@@ -1,5 +1,5 @@
 import {expect} from 'chai';
-import {utils} from 'ethers';
+import {utils, constants} from 'ethers';
 import {ethers, waffle} from 'hardhat';
 import {deploy, evm_revert, evm_snapshot, getContractAt} from './helpers/hardhat-helpers';
 import {Factory, Pool, WETH, ERC20} from '../typechain';
@@ -40,5 +40,27 @@ describe('Factory', () => {
     it('should create pool', async () => {
       expect(await pool.factory()).to.be.eq(factory.address);
     });
+    it('should create multiple pools', async () => {
+      let c1 = '0xa1fc537C09f34f671f4481665642b39E82aAd0f8';
+      let c2 = '0x5f97fe54AFc3Bb957feb48A859382A55e7d8A452';
+      factory.createPool(c1, c2);
+      expect(await factory.allPoolLength()).to.be.eq(2);
+    });
+    it('should revert if pool exists', async () => {
+      await expect(factory.createPool(token1.address, token2.address)).to.be.revertedWith('Pool exists');
+    });
+    it('should revert if zero address', async () => {
+      await expect(factory.createPool(constants.AddressZero, token1.address)).to.be.revertedWith(
+        'AMMLibrary: ZERO_ADDRESS'
+      );
+    });
+    it('should revert if identical addresses', async () => {
+      await expect(factory.createPool(token1.address, token1.address)).to.be.revertedWith('Identical addresses');
+    });
+  });
+  describe('addLiquidity', () => {
+    // it('should add liquidity', async () => {
+    //   pool.addLiquidity(10, 10, owner.address);
+    // });
   });
 });
