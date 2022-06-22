@@ -252,6 +252,7 @@ contract Pool is IPool, PoolERC20 {
       balance0 = uint256(IERC20(_token0).balanceOf(address(this)));
       balance1 = uint256(IERC20(_token1).balanceOf(address(this)));
     }
+    //amountIn refers to the amount the user has deposited
     uint256 amount0In = balance0 > _reserve0 - amount0Out
       ? balance0 - (_reserve0 - amount0Out)
       : 0;
@@ -260,12 +261,13 @@ contract Pool is IPool, PoolERC20 {
       : 0;
     require(amount0In > 0 || amount1In > 0, "Pool: INSUFFICIENT_INPUT_AMOUNT");
     require(
-      balance0 * (balance1) >= (_reserve0) * (_reserve1),
+      balance0 * balance1 >= _reserve0 * _reserve1,
       "Pool: K"
     );
-
-    //update this way means reserve0 += balance0 - reserve0 + amount0Out and reserve1 += balance1 -reserve1 + amount1Out
-    _update(balance0, balance1, reserve0-amount0Out, reserve1-amount1Out);
+    
+    //The change in reserve0 after a flash swap will be balance0 - reserve0, regardless of how much was optimistically "withdrawn" at the start
+    //update this way means reserve0 += balance0 - reserve0 and reserve1 += balance1 - reserve1
+    _update(balance0, balance1, reserve0, reserve1);
     emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
   }
 
@@ -282,7 +284,8 @@ contract Pool is IPool, PoolERC20 {
     if (tokenOut == token0) swap(amountIn, 0, to);
     else swap(0, amountIn, to);
   }
-
+  
+  //Assumption: token0 is ETH, so when you transfer to the user, always transfer token1
   function swapExactInEthForToken(address to)
     external
     payable
@@ -295,8 +298,10 @@ contract Pool is IPool, PoolERC20 {
     require(amountOut < _reserve1, "POOL: INSUFFICIENT LIQUIDITY");
     IWETH(token0).deposit{value: msg.value}();
     swap(0, msg.value, to);
+    
   }
-
+  
+  //swap function is useless here: no multiple swap paths + need to unwrap and give ETH
   function swapExactInTokenForEth(uint256 amount, address to)
     external
     onlyEthPool
@@ -306,9 +311,7 @@ contract Pool is IPool, PoolERC20 {
     (uint256 _reserve0, uint256 _reserve1) = getReserves();
     uint256 amountOut = uint256(AMMLibrary.getAmountOut(amount, _reserve1, _reserve0, 0));
     require(amountOut < _reserve0, "POOL: INSUFFICIENT LIQUIDITY");
-    TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount);
-    IWETH(token0).withdraw(amountOut);
-    payable(to).transfer(amountOut);
+    _takeTokenTransferEth(to, amount, amountOut);
   }
 
   //approve first then call this function to swap
@@ -339,9 +342,11 @@ contract Pool is IPool, PoolERC20 {
     if (msg.value - amountIn > 0) {
       payable(msg.sender).transfer(msg.value - amountIn);
     }
+    swap(0, amount, to);
     TransferHelper.safeTransfer(token1, to, amount);
   }
-
+  
+  //swap function is useless here: no multiple swap paths + need to unwrap and give ETH
   function swapExactOutTokenForEth(uint256 amount, address to)
     external
     lock
@@ -351,9 +356,15 @@ contract Pool is IPool, PoolERC20 {
     (uint256 _reserve0, uint256 _reserve1) = getReserves();
     require(amount < _reserve0, "POOL: INSUFFICIENT LIQUIDITY");
     uint256 amountIn = uint256(AMMLibrary.getAmountIn(amount, _reserve1, _reserve0, 0));
+    _takeTokenTransferEth(to, amountIn, amount);
+  }
+
+  //Assumption: token 0 is WETH, thus token1 must be the other token
+  function _takeTokenTransferEth(address to, uint256 amountIn, uint256 amountOut) private {
     TransferHelper.safeTransferFrom(token1, msg.sender, to, amountIn);
-    IWETH(token0).withdraw(amount);
-    payable(to).transfer(amount);
+    IWETH(token0).withdraw(amountOut);
+    payable(to).transfer(amountOut);
+    _update(0, amountIn, amountOut, 0);
   }
 
   function _findWhichToken(address token) internal returns(uint256 reserveIn, uint256 reserveOut, address tokenIn, address tokenOut) {
