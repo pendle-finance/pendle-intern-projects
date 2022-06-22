@@ -24,12 +24,21 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
     factory = msg.sender;
   }
 
+  
+  function initialize(IERC20 _token0, IERC20 _token1) external {
+    require(msg.sender == factory, "Not allowed."); // sufficient check
+    token0 = _token0;
+    token1 = _token1;
+  }
+
+  // @Desc: Function to update both reserve states based on the prevailing balance of both tokenA and tokenB each time an action is called upon.
   function _update(uint256 balance0, uint256 balance1) private {
     reserve0 = balance0;
     reserve1 = balance1;
   }
 
-  function mint(address to) external nonReentrant returns (uint256 lpLiquidity) {
+  // @Desc: Internal Function to mint LP tokens to Liquidity providers upon adding liquidity to the pool
+  function _mintLP(address to) private nonReentrant returns (uint256 lpLiquidity) {
     // Retrieve reserve states and store in local variable (reduce no. of SLOADs)
     (uint256 _reserves0, uint256 _reserves1) = getReserves();
 
@@ -63,9 +72,70 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
     emit Mint(msg.sender, contributedAmt0, contributedAmt1);
   }
 
+  // @Desc: External call to add liquidity to the pool
+  function addLiquidity(uint desiredAmtA, uint desiredAmtB, uint minAmtA, uint minAmtB) external virtual returns(uint amountA, uint amountB, uint lpLiquidity){
+    // Calculate final amount of tokenA and tokenB to deposit:
+    (amountA, amountB) = _addLiquidity(desiredAmtA, desiredAmtB, minAmtA, minAmtB);
+
+    // Transfer both tokens to the Pair contract:
+    token0.transfer( address(this), amountA);
+    token1.transfer( address(this), amountB);
+
+    lpLiquidity = _mintLP(msg.sender);
+  }
+
+
+ 
+  // @Desc: Function to remove liquidity by Liquidity Provider by first specifying the amount of LP token he/she wishes to trade in for the amount of tokenA and tokenB.
+  function removeLiquidity(
+        uint lpLiquidity,
+        uint minAmtA,
+        uint minAmtB) external virtual returns(uint amountA, uint amountB){
+            // Send LP Liquidity back to pair contract:
+          IERC20(address(this)).transfer( address(this), lpLiquidity);
+
+           // Burn LP Tokens to receive back proportional tokenA and tokenB
+           (amountA, amountB) = _burnLP(msg.sender);
+
+          // Since queried directly from pair contract, will always be sorted:
+          require(amountA > minAmtA, "Insufficient tokenA amount");
+          require(amountB > minAmtB, "Insufficient tokenB amount");
+        }
+
+    // @Desc: Internal function to calculate the 2 optimal amounts based on the underlying/prevailing reserves of the pool
+   function _addLiquidity(uint desiredAmtA, uint desiredAmtB, uint minAmtA, uint minAmtB ) internal virtual returns(uint amountA, uint amountB) {
+
+    // Retrieve reserves from the pair contract:
+    (uint _reserve0, uint _reserve1) = getReserves();
+
+    if(_reserve0 == 0  && _reserve1 == 0){
+      (amountA, amountB) = (desiredAmtA, desiredAmtB);
+    } else {
+      // Query Optimal Amount of tokenB based on desired Amount of Token A:
+      uint optimalAmtB = _quote(desiredAmtA, _reserve0, _reserve1);
+
+      if(optimalAmtB <= desiredAmtB){
+          require(optimalAmtB > minAmtB, "Insufficient B Amount");
+          (amountA, amountB) = (desiredAmtA, optimalAmtB);
+      } else {
+        uint optimalAmtA = _quote(desiredAmtB, _reserve0, _reserve1);
+        assert(optimalAmtA <= desiredAmtA);
+        require(optimalAmtA > minAmtA, "Insufficient A Amount");
+        (amountA, amountB) = (optimalAmtA, desiredAmtB);
+      }
+    }
+  }
+
+// @Desc: To quote the exact amount of each token based on a desired amount of one of the tokens
+  function _quote(uint amountA, uint reserveA, uint reserveB) internal pure returns(uint opAmountB){
+    require(amountA > 0, "Insufficient Amount Provided");
+    require(reserveA > 0 && reserveB > 0, "Insufficient Pool Liquidity");
+    opAmountB = amountA*reserveB / reserveA;
+  }
+
   // @Desc: Function to be called inside 'removeLiquidity' where a trade-in of LPtokens (lpLiquidity) is being made in exchange for the 2 tokens
-  function burn(address to)
-    external
+  function _burnLP(address to)
+    private
     nonReentrant
     returns (uint256 contributedAmt0, uint256 contributedAmt1)
   {
@@ -94,6 +164,7 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
     emit Burn(msg.sender, contributedAmt0, contributedAmt1, to);
   }
 
+// @Desc: Main function to swap tokens within the token pair by users
   function swap(
     uint amount0Out, 
     uint amount1Out, 
@@ -126,12 +197,8 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
         emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
     }
 
-  function initialize(IERC20 _token0, IERC20 _token1) external {
-    require(msg.sender == factory, "UniswapV2: FORBIDDEN"); // sufficient check
-    token0 = _token0;
-    token1 = _token1;
-  }
 
+  // @Desc: To return the prevailing reserve logs of the pool
   function getReserves() public view returns (uint256, uint256) {
     return (reserve0, reserve1);
   }

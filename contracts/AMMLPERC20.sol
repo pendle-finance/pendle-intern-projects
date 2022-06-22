@@ -4,7 +4,7 @@ pragma solidity ^0.8.11;
 contract AMMLPERC20 {
 
     string public constant name = "AMM LP";
-    string public constant symbol = "AMM-LP";
+    string public constant symbol = "AMM LP";
     uint8 public constant decimals = 18;
     uint  public totalSupply;
     mapping(address => uint) public balanceOf;
@@ -13,7 +13,7 @@ contract AMMLPERC20 {
     event Approval(address indexed owner, address indexed spender, uint value);
     event Transfer(address indexed from, address indexed to, uint value);
 
-    constructor(uint _totalSupply) {
+    constructor(uint _totalSupply ) {
         totalSupply = _totalSupply;
         balanceOf[msg.sender] = _totalSupply;
     }
