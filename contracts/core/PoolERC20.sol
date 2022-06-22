@@ -129,7 +129,7 @@ contract PoolERC20 is IPoolERC20 {
     uint8 v,
     bytes32 r,
     bytes32 s
-  ) external {
+  ) public {
     require(deadline >= block.timestamp, "PE20: EXPIRED");
     bytes32 digest = keccak256(
       abi.encodePacked(
