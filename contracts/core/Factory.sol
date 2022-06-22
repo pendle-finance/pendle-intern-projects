@@ -34,7 +34,7 @@ contract Factory {
       token1 = token0;
       token0 = WETH;
     }
-    params = Params({token0: token0, token1: token1, isETH: isETH});
+    params = Params({token0: token0, token1: token1, isEth: isETH});
     pool = address(new Pool{salt: salt}());
     delete params;
     getPool[token0][token1] = pool;
