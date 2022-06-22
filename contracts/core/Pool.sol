@@ -136,7 +136,7 @@ contract Pool is PoolERC20, IPool {
     address token,
     uint256 amountIn,
     address to
-  ) {
+  ) external {
     (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
     uint256 reserveIn = (token == token0) ? _reserve0 : _reserve1;
     uint256 reserveOut = (token == token0) ? _reserve1 : _reserve0;
@@ -151,8 +151,8 @@ contract Pool is PoolERC20, IPool {
   function swapExactOut(
     address token,
     uint256 amountOut,
-    uint256 to
-  ) {
+    address to
+  ) external {
     (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
     uint256 reserveIn = (token == token0) ? _reserve1 : _reserve0;
     uint256 reserveOut = (token == token0) ? _reserve0 : _reserve1;

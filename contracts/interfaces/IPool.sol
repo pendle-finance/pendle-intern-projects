@@ -83,10 +83,8 @@ interface IPool is IPoolERC20 {
   ) external returns (uint256 amountA, uint256 amountB);
 
   function swapExactOut(
-    uint256 amountAIn,
-    uint256 amountBIn,
-    uint256 amountAOut,
-    uint256 amountBOut,
+    address token,
+    uint256 amountOut,
     address to
   ) external returns (uint256 amountA, uint256 amountB);
 
