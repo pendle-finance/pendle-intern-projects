@@ -2,9 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "../interfaces/IPool.sol";
-import "../interfaces/IFactory.sol";
 
 library AMMLibrary {
+  bytes32 constant codeHash = 0x0bd738b9b5a444f3e447375ff05f3f72d0b0f199096aa1e86b3c27d42047c40a;
+
   // returns sorted token addresses, used to handle return values from pairs sorted in this order
   function sortTokens(address tokenA, address tokenB)
     internal
@@ -23,7 +24,6 @@ library AMMLibrary {
     address tokenB
   ) internal view returns (address pair) {
     (address token0, address token1) = sortTokens(tokenA, tokenB);
-    IFactory factoryContract = IFactory(factory);
     pair = address(
       uint160(
         uint256(
@@ -32,7 +32,7 @@ library AMMLibrary {
               hex"ff",
               factory,
               keccak256(abi.encodePacked(token0, token1)),
-              factoryContract.INIT_CODE_HASH() // init code hash
+              codeHash // init code hash
             )
           )
         )
