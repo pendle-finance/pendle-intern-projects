@@ -1,20 +1,25 @@
-import { expect } from "chai";
-import { utils } from "ethers";
-import { ethers, waffle } from "hardhat";
-import { deploy, evm_revert, evm_snapshot } from "./helpers/hardhat-helpers";
-import { TestContract } from "../typechain";
+import {expect} from 'chai';
+import {utils} from 'ethers';
+import {ethers, waffle} from 'hardhat';
+import {deploy, evm_revert, evm_snapshot} from './helpers/hardhat-helpers';
+import {Factory, Pool, WETH, ERC20} from '../typechain';
 
-describe("TestContract", () => {
+describe('TestContract', () => {
   const [admin] = waffle.provider.getWallets();
   let globalSnapshotId;
   let snapshotId;
-  let testContract: TestContract;
+  let factory: Factory;
+  let weth: WETH;
+  let token1: ERC20;
+  let token2: ERC20;
 
   before(async () => {
     globalSnapshotId = await evm_snapshot();
+    weth = await deploy<WETH>('WETH', []);
+    token1 = await deploy<ERC20>('ERC20', [100, 'A', 'A', 18]);
+    token2 = await deploy<ERC20>('ERC20', [100, 'B', 'B', 18]);
 
-    testContract = await deploy<TestContract>("TestContract", []);
-    await testContract.setTotal(100);
+    factory = await deploy<Factory>('Factory', [weth.address]);
 
     snapshotId = await evm_snapshot();
   });
@@ -26,19 +31,5 @@ describe("TestContract", () => {
 
   beforeEach(async () => {
     await revertSnapshot();
-  });
-
-  it("increases total successfully", async () => {
-    await testContract.increaseTotal(100);
-
-    let curTotal = await testContract.getTotal();
-    expect(curTotal).to.be.eq(200);
-  });
-
-  it("decreases total successfully", async () => {
-    await testContract.decreaseTotal(50);
-
-    let curTotal = await testContract.getTotal();
-    expect(curTotal).to.be.eq(50);
   });
 });

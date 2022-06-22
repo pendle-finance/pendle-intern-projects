@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 import "../libraries/AMMLibrary.sol";
 import "./Pool.sol";
@@ -16,6 +17,7 @@ contract Factory {
   event PoolCreated(address indexed token0, address indexed token1, address pair, uint256);
 
   constructor(address _WETH) {
+    require(_WETH != address(0), "Invalid address");
     WETH = _WETH;
   }
 
@@ -34,7 +36,7 @@ contract Factory {
       token1 = token0;
       token0 = WETH;
     }
-    params = Params({token0: token0, token1: token1, isETH: isETH});
+    params = Params({token0: token0, token1: token1, isEth: isETH});
     pool = address(new Pool{salt: salt}());
     delete params;
     getPool[token0][token1] = pool;

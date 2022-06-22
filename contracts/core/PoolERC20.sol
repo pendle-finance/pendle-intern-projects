@@ -1,12 +1,13 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "../interfaces/IPoolERC20.sol";
 
 contract PoolERC20 is IPoolERC20 {
   //Constant -> save gas pls
-  string public constant name = "LP-token";
-  string public constant symbol = "LP-TOK";
-  uint8 public constant decimals = 18;
+  string public constant override name = "LP-token";
+  string public constant override symbol = "LP-TOK";
+  uint8 public constant override decimals = 18;
 
   uint256 internal _totalSupply;
   mapping(address => uint256) internal _balances;
@@ -129,7 +130,7 @@ contract PoolERC20 is IPoolERC20 {
     uint8 v,
     bytes32 r,
     bytes32 s
-  ) public {
+  ) public override {
     require(deadline >= block.timestamp, "PE20: EXPIRED");
     bytes32 digest = keccak256(
       abi.encodePacked(
