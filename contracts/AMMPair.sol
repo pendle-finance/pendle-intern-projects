@@ -20,7 +20,7 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
 
   uint public constant MINIMUM_LIQUIDITY = 10**3;
 
-  constructor() AMMLPERC20(0) {
+  constructor() {
     factory = msg.sender;
   }
 
@@ -83,8 +83,6 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
 
     lpLiquidity = _mintLP(msg.sender);
   }
-
-
  
   // @Desc: Function to remove liquidity by Liquidity Provider by first specifying the amount of LP token he/she wishes to trade in for the amount of tokenA and tokenB.
   function removeLiquidity(
@@ -191,7 +189,7 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
         uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
         require(amount0In > 0 || amount1In > 0, "INSUFFICIENT_INPUT_AMOUNT");
 
-        require(balance0*balance1 >= _reserve0*_reserve1, "K");
+        require(balance0*balance1 >= _reserve0*_reserve1, "INSUFFICIENT_INPUT_AMOUNT: K");
 
         _update(balance0, balance1);
         emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
@@ -201,5 +199,10 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
   // @Desc: To return the prevailing reserve logs of the pool
   function getReserves() public view returns (uint256, uint256) {
     return (reserve0, reserve1);
+  }
+
+  // @Desc: To return the spot trading price of the pool x100
+  function getMarginalPrice() public view returns (uint256) {  
+    return (reserve0*100/reserve1);
   }
 }

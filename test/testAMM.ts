@@ -199,5 +199,33 @@ describe("AMM Test", () => {
     })
   })
 
+  describe("AMM Pair Contract Liquidity Swap", () => {
+
+    beforeEach(async () => {  // 20,000 tokenA / 20,000 tokenB in the pool
+      // Admin contributes 10,000 tokenA and tokenB
+      await token0.approve(myPair.address, 100000);
+      await token1.approve(myPair.address, 100000);
+      await myPair.addLiquidity(10000,10000,10000,10000);
+
+      // Alice contributes 10,000 tokenA and tokenB
+      await token0.connect(Alice).approve(myPair.address, 100000);
+      await token1.connect(Alice).approve(myPair.address, 100000);
+      await myPair.connect(Alice).addLiquidity(10000,10000,9000,9000);
+    })
+
+    it("should take 5000 tokenA from Bob and return him 4000 tokenB.", async () => {
+      console.log(await myPair.getMarginalPrice());  
+      
+      await token0.connect(Bob).transfer(myPair.address, 5000);
+      await expect(myPair.connect(Bob).swap(0, 4000, Bob.address)).to.emit(myPair, 'Swap').withArgs(Bob.address, 5000, 0, 0, 4000, Bob.address);
+
+      console.log(await myPair.getMarginalPrice());
+
+      await myPair.connect(Alice).removeLiquidity(5000, 0, 0);
+      console.log(await token0.balanceOf(Alice.address));  // should be "around" 5000 
+      console.log(await token1.balanceOf(Alice.address));  // should be "around" 5000 
+    })
+  })
+
 
 });
