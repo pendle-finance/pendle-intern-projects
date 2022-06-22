@@ -7,7 +7,7 @@ import "../libraries/AMMLibrary.sol";
 import "../libraries/TransferHelper.sol";
 import "../libraries/Math.sol";
 
-contract Pool is PoolERC20, IPool {
+contract Pool is PoolERC20 {
   uint256 public constant MINIMUM_LIQUIDITY = 10**3;
   address public factory;
   address public token0;
@@ -18,11 +18,30 @@ contract Pool is PoolERC20, IPool {
   uint32 private blockTimestampLast;
 
   uint256 private unlocked = 1;
+
+  event Mint(address indexed sender, uint256 amount0, uint256 amount1);
+
+  event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
+
+  event Swap(
+    address indexed sender,
+    uint256 amount0In,
+    uint256 amount1In,
+    uint256 amount0Out,
+    uint256 amount1Out,
+    address indexed to
+  );
+
   modifier lock() {
     require(unlocked == 1, "No reentrancy");
     unlocked = 0;
     _;
     unlocked = 1;
+  }
+
+  modifier nonZeroAddress(address addr) {
+    require(addr != address(0), "Only Non Zero Address");
+    _;
   }
 
   constructor() {
@@ -85,12 +104,16 @@ contract Pool is PoolERC20, IPool {
     address to
   )
     external
+    nonZeroAddress(to)
     returns (
       uint256 amount0In,
       uint256 amount1In,
       uint256 liquidity
     )
   {
+    require(amount0 > 0, "POOL: INVALID AMOUNT0");
+    require(amount1 > 0, "POOL: INVALID AMOUNT1");
+
     (uint112 _reserve0, uint112 _reserve1, ) = getReserves();
     uint112 optimalAmount1 = uint112(AMMLibrary.quote(amount0, _reserve0, _reserve1));
     if (optimalAmount1 > amount1) {
@@ -111,7 +134,7 @@ contract Pool is PoolERC20, IPool {
     uint112 amount0Min,
     uint112 amount1Min,
     address to
-  ) external returns (uint112 amount0, uint112 amount1) {
+  ) external nonZeroAddress(to) returns (uint112 amount0, uint112 amount1) {
     require(liquidity > 0, "POOL: INVALID LIQUIDITY");
     require(liquidity < _balances[msg.sender], "POOL: INVALID LIQUIDITY");
     uint112 totalSupply = uint112(_totalSupply);
@@ -132,8 +155,8 @@ contract Pool is PoolERC20, IPool {
   function swap(
     uint112 amount0Out,
     uint112 amount1Out,
-    address to //bytes calldata data
-  ) external {
+    address to
+  ) external nonZeroAddress(to) {
     require(amount0Out > 0 || amount1Out > 0, "Pool: INSUFFICIENT_OUTPUT_AMOUNT");
     (uint112 _reserve0, uint112 _reserve1, ) = getReserves(); // gas savings
     require(amount0Out < _reserve0 && amount1Out < _reserve1, "Pool: INSUFFICIENT_LIQUIDITY");
@@ -173,11 +196,12 @@ contract Pool is PoolERC20, IPool {
     emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
   }
 
+  //approve first then call this function to swap
   function swapExactIn(
     address token,
     uint112 amountIn,
     address to
-  ) external {
+  ) external nonZeroAddress(to) {
     (uint112 _reserve0, uint112 _reserve1, ) = getReserves();
     uint112 reserveIn = (token == token0) ? _reserve0 : _reserve1;
     uint112 reserveOut = (token == token0) ? _reserve1 : _reserve0;
@@ -190,11 +214,12 @@ contract Pool is PoolERC20, IPool {
     TransferHelper.safeTransfer(tokenOut, to, amountOut);
   }
 
+  //approve first then call this function to swap
   function swapExactOut(
     address token,
     uint112 amountOut,
     address to
-  ) external {
+  ) external nonZeroAddress(to) {
     (uint112 _reserve0, uint112 _reserve1, ) = getReserves();
     uint112 reserveIn = (token == token0) ? _reserve1 : _reserve0;
     uint112 reserveOut = (token == token0) ? _reserve0 : _reserve1;
