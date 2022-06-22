@@ -17,6 +17,7 @@ contract Factory {
   event PoolCreated(address indexed token0, address indexed token1, address pair, uint256);
 
   constructor(address _WETH) {
+    require(_WETH != address(0), "Invalid address");
     WETH = _WETH;
   }
 
