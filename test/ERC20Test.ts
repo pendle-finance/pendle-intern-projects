@@ -104,8 +104,6 @@ describe("TestContract", () => {
     await expect(erc20.transferFrom(ZERO_ADDRESS, bob.address, 401)).to.be.revertedWith("Invalid address");
     await expect(erc20.transferFrom(bob.address, ZERO_ADDRESS, 401)).to.be.revertedWith("Invalid address");
     await expect(erc20.burn(ZERO_ADDRESS, 401)).to.be.revertedWith("Invalid address");
-    await expect(erc20.mint(ZERO_ADDRESS, 401)).to.be.revertedWith("Invalid address");
-
   });
 
   it('transfer() emits transfer', async () => {

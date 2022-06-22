@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./IFactory.sol";
 import "./Pair.sol";
+import "./IERC20.sol";
 
 contract Factory is IFactory {
 
@@ -18,12 +19,13 @@ contract Factory is IFactory {
     }
 
     function createPair(address tokenA, address tokenB) external returns (address newPair){
+        
         require(tokenA != tokenB, "Same token");
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0), "Invalid token address");
         require(pairMapping[token0][token1] == address(0), "Pair exists");
-
-        newPair = address(new Pair(token0, token1, "name", "symbol"));
+        
+        newPair = address(new Pair(token0, token1, "LP TOKEN", "LPT"));
         allPairs.push(newPair);
         pairMapping[token0][token1] = newPair;
         pairMapping[token1][token0] = newPair;

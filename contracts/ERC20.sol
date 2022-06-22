@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-
 import "./IERC20Metadata.sol";
 
 contract ERC20 is IERC20Metadata{
@@ -62,14 +61,16 @@ contract ERC20 is IERC20Metadata{
     return true;
   }
 
-  function mint(address to, uint256 amount) internal validAddress(to) {
+  function mint(address to, uint256 amount) internal {
     ownership[to] += amount;
+    totalSupply += amount;
     emit Mint(to, amount);
   }
 
   function burn(address from, uint256 amount) internal validAddress(from) {
     require(ownership[from] >= amount, "Insufficient balance");
     ownership[from] -= amount;
+    totalSupply -= amount;
     emit Burn(from, amount);
   }
 }
