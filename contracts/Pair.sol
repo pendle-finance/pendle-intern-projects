@@ -41,7 +41,7 @@ contract Pair is IPair, ERC20 {
     }
   
     /// Requires user to approve transfer beforehand
-    function mint(uint256 amount0In, uint256 amount1In) public {
+    function provideLiquidity(uint256 amount0In, uint256 amount1In) public {
         address user = msg.sender;
         (uint256 balance0, uint256 balance1, ) = getReserves(); 
 
@@ -64,10 +64,10 @@ contract Pair is IPair, ERC20 {
 
         IERC20(token0).transferFrom(user, address(this), amount0In);
         IERC20(token1).transferFrom(user, address(this), amount1In);   
-        emit Mint(user, amount0In, amount1In);
+        emit ProvideLiquidity(user, amount0In, amount1In);
     }
 
-    function burn(uint256 amount0Out, uint256 amount1Out) public {
+    function removeLiquidity(uint256 amount0Out, uint256 amount1Out) public {
         address user = msg.sender;
         (uint256 balance0, uint256 balance1, ) = getReserves(); 
 
@@ -83,7 +83,7 @@ contract Pair is IPair, ERC20 {
 
         IERC20(token0).transfer(user, amount0Out);
         IERC20(token1).transfer(user, amount1Out);   
-        emit Burn(user, amount0Out, amount1Out);
+        emit RemoveLiquidity(user, amount0Out, amount1Out);
     }
 
     /// Requires user to approve transfer beforehand
