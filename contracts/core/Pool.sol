@@ -10,7 +10,7 @@ import "../libraries/Math.sol";
 import "../interfaces/IWETH.sol";
 
 contract Pool is IPool, PoolERC20 {
-  uint256 public constant override MINIMUM_LIQUIDITY = 10**3;
+  uint256 public constant override MINIMUM_LIQUIDITY = 1;
 
   address public override factory;
   address public override token0;
@@ -51,14 +51,16 @@ contract Pool is IPool, PoolERC20 {
     _mint(address(0), MINIMUM_LIQUIDITY, true);
   }
 
+  receive() external payable {}
+
   function _update(
     uint256 amount0In,
     uint256 amount1In,
     uint256 amount0Out,
     uint256 amount1Out
   ) internal {
-    reserve0 += amount0In - amount0Out;
-    reserve1 += amount1In - amount1Out;
+    reserve0 = reserve0 + amount0In - amount0Out;
+    reserve1 = reserve1 + amount1In - amount1Out;
   }
 
   function getReserves() public view override returns (uint256 _reserve0, uint256 _reserve1) {
@@ -70,7 +72,7 @@ contract Pool is IPool, PoolERC20 {
     address to,
     uint256 amount0,
     uint256 amount1
-  ) private lock nonZeroAddress(to) returns (uint256 liquidity) {
+  ) private nonZeroAddress(to) returns (uint256 liquidity) {
     uint256 totalSupply = _totalSupply;
     (uint256 _reserve0, uint256 _reserve1) = getReserves();
     if (_totalSupply == MINIMUM_LIQUIDITY) {
@@ -88,14 +90,13 @@ contract Pool is IPool, PoolERC20 {
     return liquidity;
   }
 
-  function _addLiquidity(uint256 amount0, uint256 amount1)
-    internal
-    view
-    returns (uint256, uint256)
-  {
+  function _addLiquidity(uint256 amount0, uint256 amount1) public view returns (uint256, uint256) {
     require(amount0 > 0, "POOL: INVALID AMOUNT0");
     require(amount1 > 0, "POOL: INVALID AMOUNT1");
     (uint256 _reserve0, uint256 _reserve1) = getReserves();
+    if (_reserve0 == 0 && _reserve1 == 0) {
+      return (amount0, amount1);
+    }
     uint256 optimalAmount1 = uint256(AMMLibrary.quote(amount0, _reserve0, _reserve1));
     if (optimalAmount1 <= amount1) {
       return (amount0, optimalAmount1);
@@ -113,6 +114,7 @@ contract Pool is IPool, PoolERC20 {
     external
     override
     nonZeroAddress(to)
+    lock
     returns (
       uint256 amount0In,
       uint256 amount1In,
@@ -156,10 +158,10 @@ contract Pool is IPool, PoolERC20 {
     uint256 totalSupply = uint256(_totalSupply);
     uint256 balance0 = uint256(IERC20(token0).balanceOf(address(this)));
     uint256 balance1 = uint256(IERC20(token1).balanceOf(address(this)));
-    amount0 = (liquidity / totalSupply) * balance0;
-    amount1 = (liquidity / totalSupply) * balance1;
-    require(amount0 >= amount0Min, "POOl: INVALID LIQUIDITY");
-    require(amount1 >= amount1Min, "POOL: INVALID LIQUIDITY");
+    amount0 = (liquidity * balance0) / totalSupply;
+    amount1 = (liquidity * balance1) / totalSupply;
+    require(amount0 >= amount0Min, "POOl: INVALID AMOUNT0");
+    require(amount1 >= amount1Min, "POOL: INVALID AMOUNT1");
     _burn(msg.sender, liquidity);
   }
 
@@ -172,7 +174,7 @@ contract Pool is IPool, PoolERC20 {
     (amount0, amount1) = _removeLiquidity(liquidity, amount0Min, amount1Min);
     TransferHelper.safeTransfer(token0, to, amount0);
     TransferHelper.safeTransfer(token1, to, amount1);
-    _update(0, 0, uint256(amount0), uint256(amount1));
+    _update(0, 0, amount0, amount1);
     emit Burn(msg.sender, amount0, amount1, to);
   }
 

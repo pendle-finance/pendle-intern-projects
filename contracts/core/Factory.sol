@@ -5,7 +5,7 @@ import "../libraries/AMMLibrary.sol";
 import "./Pool.sol";
 
 contract Factory is IFactory {
-  address public immutable WETH = 0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB;
+  address public immutable WETH = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
   struct Params {
     address token0;
     address token1;
