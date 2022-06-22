@@ -18,7 +18,7 @@ contract Pair is IPair, ERC20 {
     address public immutable token0;
     address public immutable token1;
 
-    // All these variable should be in the same storage space, similar to UniswapV2
+    /// All these variable should be in the same storage space, similar to UniswapV2
     uint112 public reserve0;
     uint112 public reserve1;
     uint32 public blockTimestampLast;
@@ -115,7 +115,7 @@ contract Pair is IPair, ERC20 {
     }
 
     function _updateReserve(uint256 balance0, uint256 balance1) internal {
-        require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "Pair._updateReserve(): overflow");
+        require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "Pair._updateReserve: overflow");
         reserve0 = uint112(balance0);
         reserve1 = uint112(balance1);
         blockTimestampLast = uint32(block.timestamp % (2 ** 32));
