@@ -30,7 +30,35 @@ contract LPPair is ERC20, ILPPair {
         token1 = _token1;
     }
 
-    function mint(address to) external returns (uint liquidity) {
+    function addLiquidity(uint128 amountToken0,uint128 amountToken1) external returns (uint liquidity) {
+
+        (uint128 _addAmount0,uint128 _addAmount1) = _addLiquidity(amountToken0, amountToken1);
+        IERC20(token0).transferFrom(msg.sender,address(this), _addAmount0);
+        IERC20(token1).transferFrom(msg.sender,address(this), _addAmount1);
+        liquidity = mint(msg.sender);
+    }
+
+    function swapToken(address tokenIn,uint128 amountIn) external {
+        require(tokenIn == token0 || tokenIn == token1, "Invalid swap token");
+        require(amountIn>0,"Invalid in amount");
+        (uint128 _reserve0, uint128 _reserve1) = getReserves(); 
+        if(tokenIn == token0) {
+            IERC20(token0).transferFrom(msg.sender,address(this), amountIn);
+            uint balance0 = IERC20(token0).balanceOf(address(this));
+            uint balance1 = IERC20(token1).balanceOf(address(this));
+            uint128 amountOut = uint128(balance1 - (_reserve0.mul(_reserve1)).div(balance0));
+            IERC20(token1).transfer(msg.sender, amountOut);
+            _update(balance0, balance1, _reserve0, _reserve1);
+        } else{
+            IERC20(token1).transferFrom(msg.sender,address(this), amountIn);
+            uint balance0 = IERC20(token0).balanceOf(address(this));
+            uint balance1 = IERC20(token1).balanceOf(address(this));
+            uint128 amountOut = uint128(balance0 - (_reserve0.mul(_reserve1)).div(balance1));
+            IERC20(token0).transfer(msg.sender, amountOut);
+            _update(balance0, balance1, _reserve0, _reserve1);
+        }
+    }
+    function mint(address to) public returns (uint liquidity) {
         (uint128 _reserve0, uint128 _reserve1) = getReserves(); 
         uint balance0 = IERC20(token0).balanceOf(address(this));
         uint balance1 = IERC20(token1).balanceOf(address(this));
@@ -50,6 +78,7 @@ contract LPPair is ERC20, ILPPair {
         emit Mint(msg.sender,amount0,amount1);
     }
 
+    // This is remove liquidity
     function burn(address to) external returns (uint amount0, uint amount1) {
         (uint128 _reserve0, uint128 _reserve1) = getReserves(); 
         address _token0 = token0;                               
@@ -111,6 +140,26 @@ contract LPPair is ERC20, ILPPair {
         reserve0 = uint128(balance0);
         reserve1 = uint128(balance1);
         emit Update(_reserve0, _reserve1, balance0, balance1);
+    }
+
+    function _addLiquidity(
+        uint128 amountADesired,
+        uint128 amountBDesired
+    ) internal virtual returns (uint128 amountA, uint128 amountB) {
+
+        (uint128 _reserve0, uint128 _reserve1) = getReserves();
+        if (_reserve0 == 0 && _reserve1 == 0) {
+            (amountA, amountB) = (amountADesired, amountBDesired);
+        } else {
+            uint128 amountBOptimal = uint128(amountADesired.mul(_reserve1).div(_reserve0));
+            if (amountBOptimal <= amountBDesired) {
+                (amountA, amountB) = (amountADesired, amountBOptimal);
+            } else {
+                uint128 amountAOptimal = uint128(amountBDesired.mul(_reserve0).div(_reserve1));
+                assert(amountAOptimal <= amountADesired);
+                (amountA, amountB) = (amountAOptimal, amountBDesired);
+            }
+        }
     }
 
 }

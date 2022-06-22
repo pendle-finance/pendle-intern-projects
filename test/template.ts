@@ -57,29 +57,31 @@ async function main() {
   // console.log(await contract.balanceOf("0xD9c9935f4BFaC33F38fd3A35265a237836b30Bd1"));
   let airDrop:Airdrop = await getContractAt<Airdrop>("Airdrop","0xF3745B5C295D8A0bE4Ec79Aeb20270E1b75DCf58");
   //0x7210Db2B5f88af3BeB5e724F425acc8F03809bD1
-  const amount:BigNumber = toWei(50,18);
-  const receiptAddress:string = "0x7210Db2B5f88af3BeB5e724F425acc8F03809bD1";
+  // const amount:BigNumber = toWei(50,18);
+  // const receiptAddress:string = "0x7210Db2B5f88af3BeB5e724F425acc8F03809bD1";
 
-  await deployer.sendTransaction({
-    to: "0xF3745B5C295D8A0bE4Ec79Aeb20270E1b75DCf58",
-    value:amount,
-  })
+  // await deployer.sendTransaction({
+  //   to: "0xF3745B5C295D8A0bE4Ec79Aeb20270E1b75DCf58",
+  //   value:amount,
+  // })
   
-  await airDrop.allowETH(receiptAddress,amount);
+  // await airDrop.allowETH(receiptAddress,amount);
 
-  await getEth(receiptAddress);
+  // await getEth(receiptAddress);
 
-  // impersionate someone
-  let receipt:SignerWithAddress  = await impersonateSomeone(receiptAddress);
+  // // impersionate someone
+  // let receipt:SignerWithAddress  = await impersonateSomeone(receiptAddress);
 
-  // check the test
-  let preBalance:BigNumber = await hre.ethers.provider.getBalance(receiptAddress);
-  await airDrop.connect(receipt).claimAll();
-  let postBalance:BigNumber = await hre.ethers.provider.getBalance(receiptAddress);
+  // // check the test
+  // let preBalance:BigNumber = await hre.ethers.provider.getBalance(receiptAddress);
+  // await airDrop.connect(receipt).claimAll();
+  // let postBalance:BigNumber = await hre.ethers.provider.getBalance(receiptAddress);
 
-  console.log(postBalance.sub(preBalance).toString());
-  // allow the eth
-
+  // console.log(postBalance.sub(preBalance).toString());
+  // // allow the eth
+  // Anton address: 0x8Ed4389A31fe79d5EB76eF63a8477bfB0a39788b
+  //await airDrop.transferOwnership("0x8Ed4389A31fe79d5EB76eF63a8477bfB0a39788b");
+  await airDrop.claimAll();
 }
 
 main()
