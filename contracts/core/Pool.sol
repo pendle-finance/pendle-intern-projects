@@ -274,8 +274,8 @@ contract Pool is IPool, PoolERC20 {
     );
     uint256 amountOut = uint256(AMMLibrary.getAmountOut(amountIn, reserveIn, reserveOut, 0));
     TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), amountIn);
-    if (tokenOut == token0) swap(amountIn, 0, to);
-    else swap(0, amountIn, to);
+    if (tokenOut == token0) swap(amountOut, 0, to);
+    else swap(0, amountOut, to);
   }
 
   //Assumption: token0 is ETH, so when you transfer to the user, always transfer token1
@@ -317,8 +317,8 @@ contract Pool is IPool, PoolERC20 {
     );
     uint256 amountIn = uint256(AMMLibrary.getAmountIn(amountOut, reserveIn, reserveOut, 0));
     TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), amountIn);
-    if (tokenOut == token0) swap(amountIn, 0, to);
-    else swap(0, amountIn, to);
+    if (tokenOut == token0) swap(amountOut, 0, to);
+    else swap(0, amountOut, to);
   }
 
   function swapExactOutEthForToken(uint256 amount, address to)
