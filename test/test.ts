@@ -13,9 +13,10 @@ describe('Factory', () => {
   let token1: ERC20;
   let token2: ERC20;
   let pool: Pool;
-
+  let owner, addr1, addr2, addr3;
   before(async () => {
     globalSnapshotId = await evm_snapshot();
+    [owner, addr1, addr2, addr3] = await ethers.getSigners();
     weth = await deploy<WETH>('WETH', []);
     token1 = await deploy<ERC20>('ERC20', [100, 'A', 'A', 18]);
     token2 = await deploy<ERC20>('ERC20', [100, 'B', 'B', 18]);

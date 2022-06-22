@@ -5,7 +5,7 @@ import "../libraries/AMMLibrary.sol";
 import "./Pool.sol";
 
 contract Factory is IFactory {
-  address public immutable WETH = 0xC9BdeEd33CD01541e1eeD10f90519d2C06Fe3feB;
+  address public immutable WETH = 0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB;
   struct Params {
     address token0;
     address token1;
@@ -60,6 +60,4 @@ contract Factory is IFactory {
     emit PoolCreated(token0, token1, pool, pools.length);
     return pool;
   }
-
-  function INIT_CODE_HASH() external view override returns (bytes32 initHash) {}
 }
