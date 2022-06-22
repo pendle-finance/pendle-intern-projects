@@ -92,7 +92,7 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
         uint minAmtA,
         uint minAmtB) external virtual returns(uint amountA, uint amountB){
             // Send LP Liquidity back to pair contract:
-          IERC20(address(this)).transfer( address(this), lpLiquidity);
+         _transfer( msg.sender, address(this), lpLiquidity);
 
            // Burn LP Tokens to receive back proportional tokenA and tokenB
            (amountA, amountB) = _burnLP(msg.sender);

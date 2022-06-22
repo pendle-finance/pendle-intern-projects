@@ -107,7 +107,7 @@ describe("AMM Test", () => {
 })
 })
 
-  describe("AMM Pair Contract Procedures", () => {
+  describe("AMM Pair Contract Liquidity Provision", () => {
     it("should ALLOW Liquidity Provider to successfully add liquidity (10,000 tokenA, 10,000 tokenB) and receive (10,000 - 1000 = 9000) LP tokens", async () => {
       await token0.approve(myPair.address, 100000);
       await token1.approve(myPair.address, 100000);
@@ -128,20 +128,75 @@ describe("AMM Test", () => {
      
      await expect(myPair.addLiquidity(1000,1000,1000,1000)).to.be.revertedWith("Insufficient liquidity");
     });
-  
-  //   it("burn successfully", async () => {
-  //     await myPair.connect(Alice).transfer(myPair.address, 100);
-  //     await myPair.connect(Alice).burn(Alice.address);
-  
-  //     console.log(await token0.balanceOf(Alice.address), await token1.balanceOf(Alice.address));
-  //   });
-  
-  //   it("swap successfully", async () => {
-  //     await token0.connect(Bob).transfer(myPair.address, 10);
-  //     await myPair.connect(Bob).swap(0, 5, Bob.address);
-  
-  //     console.log(await token0.balanceOf(Alice.address), await token1.balanceOf(Alice.address));
-  //   });
+
+    it("should MINT LP Tokens proportional to the contribution of the pool after liquidity has been added.", async () => {
+      await token0.approve(myPair.address, 100000);
+      await token1.approve(myPair.address, 100000);
+     
+      await expect(myPair.addLiquidity(10000,10000,10000,10000)).to.emit(myPair, 'Mint').withArgs(admin.address, 10000, 10000);
+
+      await token0.connect(Alice).approve(myPair.address, 100000);
+      await token1.connect(Alice).approve(myPair.address, 100000);
+     
+      await expect(myPair.connect(Alice).addLiquidity(10000,10000,9000,9000)).to.emit(myPair, 'Mint').withArgs(Alice.address, 10000, 10000);
+           console.log("Alice LP Balance",await myPair.balanceOf(Alice.address));
+    });
+  })
+
+
+  describe("AMM Pair Contract Liquidity Removal", () => {
+
+    beforeEach(async () => {
+      // Admin contributes 10,000 tokenA and tokenB
+      await token0.approve(myPair.address, 100000);
+      await token1.approve(myPair.address, 100000);
+      await myPair.addLiquidity(10000,10000,10000,10000);
+
+      // Alice contributes 10,000 tokenA and tokenB
+      await token0.connect(Alice).approve(myPair.address, 100000);
+      await token1.connect(Alice).approve(myPair.address, 100000);
+      await myPair.connect(Alice).addLiquidity(10000,10000,9000,9000);
+
+       // Bob contributes 10,000 tokenA and tokenB
+       await token0.connect(Bob).approve(myPair.address, 100000);
+       await token1.connect(Bob).approve(myPair.address, 100000);
+       await myPair.connect(Bob).addLiquidity(10000,10000,9000,9000);
+    })
+
+    it("should MINT 9,000 LP tokens to Admin, 10,000 LP tokens to Alice and 10,000 LP tokens to Bob.", async () => {
+      let adminBalance = await myPair.balanceOf(admin.address);
+      aliceBalance = await myPair.balanceOf(Alice.address);
+      bobBalance = await myPair.balanceOf(Bob.address);
+
+      expect(adminBalance).to.be.eq(BigNumber.from(9000));
+      expect(aliceBalance).to.be.eq(BigNumber.from(10000))
+      expect(bobBalance).to.be.eq(BigNumber.from(10000))
+    })
+
+    it("should ALLOW Liquidity Provider to successfully remove liquidity by trading in LP Tokens and receive tokenA & tokenB proportionally.", async () => {
+      let initialToken0AdminBalance = await token0.balanceOf(admin.address);
+      let initialToken1AdminBalance = await token1.balanceOf(admin.address);
+      await myPair.removeLiquidity(9000, 0,0)
+
+      let postToken0AdminBalance = await token0.balanceOf(admin.address);
+      let postToken1AdminBalance = await token1.balanceOf(admin.address);
+      
+      expect(postToken0AdminBalance.sub(initialToken0AdminBalance)).to.be.eq(9000);
+      expect(postToken1AdminBalance.sub(initialToken1AdminBalance)).to.be.eq(9000);
+
+
+      let initialToken0AliceBalance = await token0.balanceOf(Alice.address);
+      let initialToken1AliceBalance = await token1.balanceOf(Alice.address);
+      await myPair.connect(Alice).removeLiquidity(5000,0,0)
+      let postToken0AliceBalance = await token0.balanceOf(Alice.address);
+      let postToken1AliceBalance = await token1.balanceOf(Alice.address);
+
+
+      expect(postToken0AliceBalance.sub(initialToken0AliceBalance)).to.be.eq(5000);
+      expect(postToken1AliceBalance.sub(initialToken1AliceBalance)).to.be.eq(5000);
+      // console.log("Alice token0 Balance",await token0.balanceOf(Alice.address));
+      // console.log("Alice token1 Balance",await token1.balanceOf(Alice.address));
+    })
   })
 
 
