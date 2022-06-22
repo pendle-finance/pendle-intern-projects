@@ -2,7 +2,7 @@ pragma solidity ^0.8.0;
 
 import "./IPoolERC20.sol";
 
-interface IPool is IPoolERC20 {
+interface IPool {
   event Mint(address indexed sender, uint256 amount0, uint256 amount1);
 
   event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
@@ -28,9 +28,8 @@ interface IPool is IPoolERC20 {
     external
     view
     returns (
-      uint112 reserve0,
-      uint112 reserve1,
-      uint32 blockTimestampLast
+      uint256 reserve0,
+      uint256 reserve1
     );
 
   //consider to implement this function in the future
@@ -67,7 +66,7 @@ interface IPool is IPoolERC20 {
 
   function swapExactIn(
     address token,
-    uint112 amountIn,
+    uint256 amountIn,
     address to
   ) external;
 

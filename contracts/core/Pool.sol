@@ -8,31 +8,19 @@ import "../libraries/TransferHelper.sol";
 import "../libraries/Math.sol";
 import "../interfaces/IWETH.sol";
 
-contract Pool is PoolERC20 {
+contract Pool is IPool, PoolERC20 {
   uint256 public constant MINIMUM_LIQUIDITY = 10**3;
-  bool public isETH;
+
   address public factory;
   address public token0;
   address public token1;
 
   uint256 private reserve0;
   uint256 private reserve1;
-  uint32 private blockTimestampLast;
 
+  //uint8 take same space as bool
   uint8 private unlocked = 1;
-
-  event Mint(address indexed sender, uint256 amount0, uint256 amount1);
-
-  event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
-
-  event Swap(
-    address indexed sender,
-    uint256 amount0In,
-    uint256 amount1In,
-    uint256 amount0Out,
-    uint256 amount1Out,
-    address indexed to
-  );
+  bool public isETH;
 
   modifier lock() {
     require(unlocked == 1, "No reentrancy");
@@ -62,8 +50,6 @@ contract Pool is PoolERC20 {
     _mint(address(0), MINIMUM_LIQUIDITY, true);
   }
 
-  receive() external payable {}
-
   function _update(
     uint256 amount0In,
     uint256 amount1In,
@@ -72,7 +58,6 @@ contract Pool is PoolERC20 {
   ) internal {
     reserve0 += amount0In - amount0Out;
     reserve1 += amount1In - amount1Out;
-    blockTimestampLast = uint32(block.timestamp % 2**32);
   }
 
   function getReserves()
@@ -80,13 +65,11 @@ contract Pool is PoolERC20 {
     view
     returns (
       uint256 _reserve0,
-      uint256 _reserve1,
-      uint32 _blockTimestampLast
+      uint256 _reserve1
     )
   {
     _reserve0 = reserve0;
     _reserve1 = reserve1;
-    _blockTimestampLast = blockTimestampLast;
   }
 
   function mint(
@@ -95,7 +78,7 @@ contract Pool is PoolERC20 {
     uint256 amount1
   ) private lock nonZeroAddress(to) returns (uint256 liquidity) {
     uint256 totalSupply = _totalSupply;
-    (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
+    (uint256 _reserve0, uint256 _reserve1) = getReserves();
     if (_totalSupply == MINIMUM_LIQUIDITY) {
       liquidity = Math.sqrt(amount0 * amount1);
     } else {
@@ -118,7 +101,7 @@ contract Pool is PoolERC20 {
   {
     require(amount0 > 0, "POOL: INVALID AMOUNT0");
     require(amount1 > 0, "POOL: INVALID AMOUNT1");
-    (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
+    (uint256 _reserve0, uint256 _reserve1) = getReserves();
     uint256 optimalAmount1 = uint256(AMMLibrary.quote(amount0, _reserve0, _reserve1));
     if (optimalAmount1 <= amount1) {
       return (amount0, optimalAmount1);
@@ -249,9 +232,9 @@ contract Pool is PoolERC20 {
     uint256 amount0Out,
     uint256 amount1Out,
     address to
-  ) external lock nonZeroAddress(to) {
+  ) public lock nonZeroAddress(to) {
     require(amount0Out > 0 || amount1Out > 0, "Pool: INSUFFICIENT_OUTPUT_AMOUNT");
-    (uint256 _reserve0, uint256 _reserve1, ) = getReserves(); // gas savings
+    (uint256 _reserve0, uint256 _reserve1) = getReserves(); // gas savings
     require(amount0Out < _reserve0 && amount1Out < _reserve1, "Pool: INSUFFICIENT_LIQUIDITY");
 
     uint256 balance0;
@@ -275,35 +258,28 @@ contract Pool is PoolERC20 {
       ? balance1 - (_reserve1 - amount1Out)
       : 0;
     require(amount0In > 0 || amount1In > 0, "Pool: INSUFFICIENT_INPUT_AMOUNT");
-    {
-      // scope for reserve{0,1}Adjusted, avoids stack too deep errors
-      uint256 balance0Adjusted = balance0 * (1000) - (amount0In * (3));
-      uint256 balance1Adjusted = balance1 * (1000) - (amount1In * (3));
-      require(
-        balance0Adjusted * (balance1Adjusted) >= uint256(_reserve0) * (_reserve1) * (1000**2),
-        "Pool: K"
-      );
-    }
+    require(
+      balance0 * (balance1) >= (_reserve0) * (_reserve1),
+      "Pool: K"
+    );
 
-    _update(amount0In, amount1In, _reserve0, _reserve1);
+    //update this way means reserve0 += balance0 - reserve0 + amount0Out and reserve1 += balance1 -reserve1 + amount1Out
+    _update(balance0, balance1, reserve0-amount0Out, reserve1-amount1Out);
     emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
   }
 
   //approve first then call this function to swap
+  //no prevention of slippage and can be front run by other people
   function swapExactIn(
     address token,
     uint256 amountIn,
     address to
   ) external nonZeroAddress(to) lock onlyValidToken(token) {
-    (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
-    uint256 reserveIn = (token == token0) ? _reserve0 : _reserve1;
-    uint256 reserveOut = (token == token0) ? _reserve1 : _reserve0;
-    address tokenIn = (token == token0) ? token0 : token1;
-    address tokenOut = (token == token0) ? token1 : token0;
+    (uint256 reserveIn, uint256 reserveOut, address tokenIn, address tokenOut) = _findWhichToken(token);
     uint256 amountOut = uint256(AMMLibrary.getAmountOut(amountIn, reserveIn, reserveOut, 0));
-    require(amountOut < reserveOut, "POOL: INSUFFICIENT LIQUIDITY");
     TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), amountIn);
-    TransferHelper.safeTransfer(tokenOut, to, amountOut);
+    if (tokenOut == token0) swap(amountIn, 0, to);
+    else swap(0, amountIn, to);
   }
 
   function swapExactInEthForToken(address to)
@@ -313,11 +289,11 @@ contract Pool is PoolERC20 {
     lock
     nonZeroAddress(to)
   {
-    (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
+    (uint256 _reserve0, uint256 _reserve1) = getReserves();
     uint256 amountOut = uint256(AMMLibrary.getAmountOut(msg.value, _reserve0, _reserve1, 0));
     require(amountOut < _reserve1, "POOL: INSUFFICIENT LIQUIDITY");
     IWETH(token0).deposit{value: msg.value}();
-    TransferHelper.safeTransfer(token1, to, amountOut);
+    swap(0, msg.value, to);
   }
 
   function swapExactInTokenForEth(uint256 amount, address to)
@@ -326,7 +302,7 @@ contract Pool is PoolERC20 {
     lock
     nonZeroAddress(to)
   {
-    (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
+    (uint256 _reserve0, uint256 _reserve1) = getReserves();
     uint256 amountOut = uint256(AMMLibrary.getAmountOut(amount, _reserve1, _reserve0, 0));
     require(amountOut < _reserve0, "POOL: INSUFFICIENT LIQUIDITY");
     TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount);
@@ -340,15 +316,11 @@ contract Pool is PoolERC20 {
     uint256 amountOut,
     address to
   ) external nonZeroAddress(to) lock onlyValidToken(token) {
-    (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
-    uint256 reserveIn = (token == token0) ? _reserve1 : _reserve0;
-    uint256 reserveOut = (token == token0) ? _reserve0 : _reserve1;
-    require(amountOut < reserveOut, "POOL: INSUFFICIENT LIQUIDITY");
+    (uint256 reserveIn, uint256 reserveOut, address tokenIn, address tokenOut) = _findWhichToken(token);
     uint256 amountIn = uint256(AMMLibrary.getAmountIn(amountOut, reserveIn, reserveOut, 0));
-    address tokenIn = (token == token0) ? token1 : token0;
-    address tokenOut = (token == token0) ? token0 : token1;
     TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), amountIn);
-    TransferHelper.safeTransfer(tokenOut, to, amountOut);
+    if (tokenOut == token0) swap(amountIn, 0, to);
+    else swap(0, amountIn, to);
   }
 
   function swapExactOutEthForToken(uint256 amount, address to)
@@ -358,7 +330,7 @@ contract Pool is PoolERC20 {
     nonZeroAddress(to)
     onlyEthPool
   {
-    (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
+    (uint256 _reserve0, uint256 _reserve1) = getReserves();
     require(amount < _reserve1, "POOL: INSUFFICIENT LIQUIDITY");
     uint256 amountIn = uint256(AMMLibrary.getAmountIn(amount, _reserve0, _reserve1, 0));
     require(msg.value >= amountIn, "INSUFFICIENT ETH");
@@ -375,11 +347,26 @@ contract Pool is PoolERC20 {
     nonZeroAddress(to)
     onlyEthPool
   {
-    (uint256 _reserve0, uint256 _reserve1, ) = getReserves();
+    (uint256 _reserve0, uint256 _reserve1) = getReserves();
     require(amount < _reserve0, "POOL: INSUFFICIENT LIQUIDITY");
     uint256 amountIn = uint256(AMMLibrary.getAmountIn(amount, _reserve1, _reserve0, 0));
     TransferHelper.safeTransferFrom(token1, msg.sender, to, amountIn);
     IWETH(token0).withdraw(amount);
     payable(to).transfer(amount);
+  }
+
+  function _findWhichToken(address token) internal returns(uint256 reserveIn, uint256 reserveOut, address tokenIn, address tokenOut) {
+    (uint256 _reserve0, uint256 _reserve1) = getReserves();
+    if (token == token0) {
+      reserveIn = _reserve0;
+      reserveOut = _reserve1;
+      tokenIn = token0;
+      tokenOut = token1;
+    } else {
+      reserveIn = _reserve1;
+      reserveOut = _reserve0;
+      tokenIn = token1;
+      tokenOut = token0;
+    }
   }
 }
