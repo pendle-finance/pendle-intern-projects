@@ -42,13 +42,12 @@ interface IPool is IPoolERC20 {
 
   function mint(address to) external returns (uint256 liquidity);
 
-  function burn(address to) external returns (uint256 amount0, uint256 amount1);
+  // function burn(address to) external returns (uint256 amount0, uint256 amount1);
 
   function swap(
     uint256 amount0Out,
     uint256 amount1Out,
-    address to,
-    bytes calldata data
+    address to
   ) external;
 
   function initialize(address, address) external;
@@ -80,13 +79,13 @@ interface IPool is IPoolERC20 {
     uint256 amountAOut,
     uint256 amountBOut,
     address to
-  ) external returns (uint256 amountA, uint256 amountB);
+  ) external;
 
   function swapExactOut(
     address token,
     uint256 amountOut,
     address to
-  ) external returns (uint256 amountA, uint256 amountB);
+  ) external;
 
   //May add support function for ETH
 }
