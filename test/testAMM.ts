@@ -23,6 +23,8 @@ describe("AMM Test", () => {
 
   let token0: TokenA;
   let token1: TokenB;
+  let aliceBalance;
+  let bobBalance;
 
   before(async () => {
     globalSnapshotId = await evm_snapshot();
@@ -63,6 +65,25 @@ describe("AMM Test", () => {
     expect(await myPair.token0()).to.be.eq(token0.address);
     expect(await myPair.token1()).to.be.eq(token1.address);
   });
+
+ })
+
+ describe("TokenA & TokenB Pre-Initialisation Status",()=> {
+  it("should TRANSFER both Alice and Bob 1000 worth of Token A", async () => {
+      aliceBalance = await token0.balanceOf(Alice.address);
+      bobBalance = await token0.balanceOf(Bob.address);
+
+      expect(aliceBalance).to.be.eq(BigNumber.from(1000));
+      expect(bobBalance).to.be.eq(BigNumber.from(1000));
+  });
+
+  it("should TRANSFER both Alice and Bob 1000 worth of Token B", async () => {
+    aliceBalance = await token1.balanceOf(Alice.address);
+    bobBalance = await token1.balanceOf(Bob.address);
+
+    expect(aliceBalance).to.be.eq(BigNumber.from(1000));
+    expect(bobBalance).to.be.eq(BigNumber.from(1000));
+});
 
  })
 
