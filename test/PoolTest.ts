@@ -104,8 +104,10 @@ describe('Pool Tests for swaps', () => {
     });
 
     it('Pool address is deterministic and correct', async () => {
-        // let pairAddress = await testLib.pairFor(factory.address,token0.address,token1.address);
-        // expect(pairAddress).to.be.eq(pool.address);
+        let pairAddress = await testLib.pairFor(factory.address,token0.address,token1.address);
+        expect(pairAddress).to.be.eq(pool.address);
+        pairAddress = await testLib.pairFor(factory.address,weth.address,token0.address);
+        expect(pairAddress).to.be.eq(ethPool.address);
         //TODO: still need test ethPool
     });
   });
@@ -241,7 +243,7 @@ describe('Pool Tests for swaps', () => {
     });
 
     it('cannot swap invalid/non-pool/LP tokens', async () => {
-      let randaddr = "0c187d084f664f0b5c4dab915705148691c0651df4";
+      let randaddr = "0x0c187d084f664f0b5c4dab915705148691c0651d";
       await expect(pool.connect(a).swapExactIn(randaddr,100,a.address)).to.be.revertedWith("INVALID TOKEN");
       await expect(pool.connect(a).swapExactIn(pool.address,100,a.address)).to.be.revertedWith("INVALID TOKEN");
       let randToken = await deploy<ERC20>('ERC20', [100, 'randToken', 'rand', 18]);

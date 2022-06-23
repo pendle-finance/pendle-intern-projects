@@ -15,40 +15,6 @@ library AMMLibrary {
     require(token0 != address(0), "AMMLibrary: ZERO_ADDRESS");
   }
 
-  // calculates the CREATE2 address for a pair without making any external calls
-  function pairFor(
-    address factory,
-    address tokenA,
-    address tokenB
-  ) internal view returns (address pair) {
-    (address token0, address token1) = sortTokens(tokenA, tokenB);
-    pair = address(
-      uint160(
-        uint256(
-          keccak256(
-            abi.encodePacked(
-              hex"ff",
-              factory,
-              keccak256(abi.encodePacked(token0, token1)),
-              IPool(factory). // init code hash
-            )
-          )
-        )
-      )
-    );
-  }
-
-  // fetches and sorts the reserves for a pair
-  function getReserves(
-    address factory,
-    address tokenA,
-    address tokenB
-  ) internal view returns (uint256 reserveA, uint256 reserveB) {
-    (address token0, ) = sortTokens(tokenA, tokenB);
-    (uint256 reserve0, uint256 reserve1) = IPool(pairFor(factory, tokenA, tokenB)).getReserves();
-    (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
-  }
-
   // given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
   function quote(
     uint256 amountA,
@@ -89,39 +55,4 @@ library AMMLibrary {
     uint256 denominator = reserveOut - (amountOut * (1000 - fee));
     amountIn = (numerator / denominator) + (1);
   }
-
-  function min(uint256 amount0, uint256 amount1) internal pure returns (uint256 minAmount) {
-    minAmount = amount0 < amount1 ? amount0 : amount1;
-  }
-
-  // No pathing planned to be implemented yet
-  //   // performs chained getAmountOut calculations on any number of pairs
-  //   function getAmountsOut(
-  //     address factory,
-  //     uint256 amountIn,
-  //     address[] memory path
-  //   ) internal view returns (uint256[] memory amounts) {
-  //     require(path.length >= 2, "AMMLibrary: INVALID_PATH");
-  //     amounts = new uint256[](path.length);
-  //     amounts[0] = amountIn;
-  //     for (uint256 i; i < path.length - 1; i++) {
-  //       (uint256 reserveIn, uint256 reserveOut) = getReserves(factory, path[i], path[i + 1]);
-  //       amounts[i + 1] = getAmountOut(amounts[i], reserveIn, reserveOut);
-  //     }
-  //   }
-
-  //   // performs chained getAmountIn calculations on any number of pairs
-  //   function getAmountsIn(
-  //     address factory,
-  //     uint256 amountOut,
-  //     address[] memory path
-  //   ) internal view returns (uint256[] memory amounts) {
-  //     require(path.length >= 2, "AMMLibrary: INVALID_PATH");
-  //     amounts = new uint256[](path.length);
-  //     amounts[amounts.length - 1] = amountOut;
-  //     for (uint256 i = path.length - 1; i > 0; i--) {
-  //       (uint256 reserveIn, uint256 reserveOut) = getReserves(factory, path[i - 1], path[i]);
-  //       amounts[i - 1] = getAmountIn(amounts[i], reserveIn, reserveOut);
-  //     }
-  //   }
 }

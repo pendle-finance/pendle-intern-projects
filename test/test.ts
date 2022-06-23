@@ -2,7 +2,7 @@ import {expect} from 'chai';
 import {utils, constants} from 'ethers';
 import {ethers, waffle} from 'hardhat';
 import {deploy, evm_revert, evm_snapshot, getContractAt} from './helpers/hardhat-helpers';
-import {Factory, Pool, WETH, ERC20, GetCodeHash, GetPool} from '../typechain';
+import {Factory, Pool, WETH, ERC20, GetCodeHash, TestLibrary} from '../typechain';
 import hre from 'hardhat';
 
 describe('Factory', () => {
@@ -16,7 +16,7 @@ describe('Factory', () => {
   let pool: Pool;
   let ethPool: Pool;
   let test: GetCodeHash;
-  let getPool: GetPool;
+  let getPool: TestLibrary;
   let owner, addr1, addr2, addr3;
   before(async () => {
     globalSnapshotId = await evm_snapshot();
@@ -25,7 +25,7 @@ describe('Factory', () => {
     token1 = await deploy<ERC20>('ERC20', [100, 'A', 'A', 18]);
     token0 = await deploy<ERC20>('ERC20', [100, 'B', 'B', 18]);
     test = await deploy<GetCodeHash>('GetCodeHash', []);
-    getPool = await deploy<GetPool>('GetPool', []);
+    getPool = await deploy<TestLibrary>('TestLibrary', []);
     await token1.mint(owner.address, 1000);
     await token1.mint(addr1.address, 1000);
     await token0.mint(owner.address, 1000);

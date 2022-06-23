@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "../libraries/AMMLibrary.sol";
+import "../libraries/GetPool.sol";
 
 contract TestLibrary {
   function sortTokens(address tokenA, address tokenB)
@@ -10,14 +11,6 @@ contract TestLibrary {
     returns (address token0, address token1)
   {
     (token0, token1) = AMMLibrary.sortTokens(tokenA, tokenB);
-  }
-
-  function pairFor(
-    address factory,
-    address tokenA,
-    address tokenB
-  ) public view returns (address pair) {
-    pair = AMMLibrary.pairFor(factory, tokenA, tokenB);
   }
 
   function quote(
@@ -44,5 +37,13 @@ contract TestLibrary {
     uint256 fee
   ) public pure returns (uint256 amountIn) {
     amountIn = AMMLibrary.getAmountIn(amountOut, reserveIn, reserveOut, fee);
+  }
+
+  function pairFor(
+    address factory,
+    address tokenA,
+    address tokenB
+  ) public view returns (address pair) {
+    pair = GetPool.pairFor(factory, tokenA, tokenB);
   }
 }
