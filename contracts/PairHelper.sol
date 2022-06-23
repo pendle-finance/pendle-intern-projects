@@ -41,13 +41,13 @@ library PairHelper {
      */
     function swapExactIn0(Pair pair, uint256 amount0In) external {
         (uint256 balance0, uint256 balance1, ) = pair.getReserves();
-        pair.swap(amount0In, 0, 0, balance1 - balance0 * balance1 / (balance0 + amount0In));
+        pair.swap(amount0In, 0, 0, balance1 - Math.ceilDiv(balance0 * balance1, balance0 + amount0In));
     }
 
     /// Similar to swapExactIn0
     function swapExactIn1(Pair pair, uint256 amount1In) external {
         (uint256 balance0, uint256 balance1, ) = pair.getReserves();
-        pair.swap(0, amount1In, balance0 - balance0 * balance1 / (balance1 + amount1In), 0);
+        pair.swap(0, amount1In, balance0 - Math.ceilDiv(balance0 * balance1, balance1 + amount1In), 0);
     }
 
     /*
@@ -58,12 +58,12 @@ library PairHelper {
      */
     function swapExactOut0(Pair pair, uint256 amount0Out) external {
         (uint256 balance0, uint256 balance1, ) = pair.getReserves();
-        pair.swap(0, Math.ceilDiv(balance0 * balance1, balance0 + amount0Out) - balance1, amount0Out, 0);
+        pair.swap(0, Math.ceilDiv(balance0 * balance1, balance0 - amount0Out) - balance1, amount0Out, 0);
     }
     
     /// Similar to swapExactOut0
     function swapExactOut1(Pair pair, uint256 amount1Out) external {
         (uint256 balance0, uint256 balance1, ) = pair.getReserves();
-        pair.swap(Math.ceilDiv(balance0 * balance1, balance1 + amount1Out) - balance0, 0, 0, amount1Out);
+        pair.swap(Math.ceilDiv(balance0 * balance1, balance1 - amount1Out) - balance0, 0, 0, amount1Out);
     }
 }
