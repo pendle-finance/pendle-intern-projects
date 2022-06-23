@@ -270,7 +270,7 @@ contract Pool is IPool, PoolERC20 {
     address token,
     uint256 amountIn,
     address to
-  ) external override nonZeroAddress(to) lock onlyValidToken(token) {
+  ) external override nonZeroAddress(to) onlyValidToken(token) {
     (uint256 reserveIn, uint256 reserveOut, address tokenIn, address tokenOut) = _findWhichToken(
       token
     );
@@ -281,13 +281,7 @@ contract Pool is IPool, PoolERC20 {
   }
 
   //Assumption: token0 is ETH, so when you transfer to the user, always transfer token1
-  function swapExactInEthForToken(address to)
-    external
-    payable
-    onlyEthPool
-    lock
-    nonZeroAddress(to)
-  {
+  function swapExactInEthForToken(address to) external payable onlyEthPool nonZeroAddress(to) {
     (uint256 _reserve0, uint256 _reserve1) = getReserves();
     uint256 amountOut = uint256(AMMLibrary.getAmountOut(msg.value, _reserve0, _reserve1, 0));
     require(amountOut < _reserve1, "POOL: INSUFFICIENT LIQUIDITY");
@@ -299,7 +293,6 @@ contract Pool is IPool, PoolERC20 {
   function swapExactInTokenForEth(uint256 amount, address to)
     external
     onlyEthPool
-    lock
     nonZeroAddress(to)
   {
     (uint256 _reserve0, uint256 _reserve1) = getReserves();
@@ -313,7 +306,7 @@ contract Pool is IPool, PoolERC20 {
     address token,
     uint256 amountOut,
     address to
-  ) external override nonZeroAddress(to) lock onlyValidToken(token) {
+  ) external override nonZeroAddress(to) onlyValidToken(token) {
     (uint256 reserveIn, uint256 reserveOut, address tokenIn, address tokenOut) = _findWhichToken(
       token
     );
@@ -326,7 +319,6 @@ contract Pool is IPool, PoolERC20 {
   function swapExactOutEthForToken(uint256 amount, address to)
     external
     payable
-    lock
     nonZeroAddress(to)
     onlyEthPool
   {
@@ -344,7 +336,6 @@ contract Pool is IPool, PoolERC20 {
   //swap function is useless here: no multiple swap paths + need to unwrap and give ETH
   function swapExactOutTokenForEth(uint256 amount, address to)
     external
-    lock
     nonZeroAddress(to)
     onlyEthPool
   {
