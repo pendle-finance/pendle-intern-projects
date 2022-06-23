@@ -4,8 +4,6 @@ pragma solidity ^0.8.0;
 import "../interfaces/IPool.sol";
 
 library AMMLibrary {
-  bytes32 constant codeHash = 0xea9019522105ba5d1fa28efc75c6f52ed27e76df0459453cb1a3269ab035ef2c;
-
   // returns sorted token addresses, used to handle return values from pairs sorted in this order
   function sortTokens(address tokenA, address tokenB)
     internal
@@ -32,7 +30,7 @@ library AMMLibrary {
               hex"ff",
               factory,
               keccak256(abi.encodePacked(token0, token1)),
-              codeHash // init code hash
+              IPool(factory). // init code hash
             )
           )
         )
