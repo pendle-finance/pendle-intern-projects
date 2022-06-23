@@ -121,25 +121,35 @@ describe('Factory', () => {
     });
   });
   describe('remove liquidity', () => {
-    beforeEach(async () => {
-      await token1.approve(pool.address, 10);
-      await token0.approve(pool.address, 10);
-      await pool.addLiquidity(10, 10, owner.address);
-    });
     it('should remove liquidity', async () => {
-      expect(await pool.balanceOf(owner.address)).to.be.eq(10);
+      await token0.approve(pool.address, 7);
+      await token1.approve(pool.address, 10);
+      await pool.addLiquidity(7, 10, owner.address);
+      expect(await pool.balanceOf(owner.address)).to.be.eq(8);
       // console.log(await token0.balanceOf(pool.address));
       // console.log(await token1.balanceOf(pool.address));
       // console.log(await pool.totalSupply());
-      await pool.removeLiquidity(6, 1, 1, owner.address);
+      await pool.removeLiquidity(2, 1, 1, owner.address);
       // console.log(await (await pool.getReserves())._reserve0);
       // console.log(await (await pool.getReserves())._reserve1);
       // console.log(await token0.balanceOf(pool.address));
       // console.log(await token1.balanceOf(pool.address));
-      expect(await token0.balanceOf(owner.address)).to.be.eq(1095);
-      expect(await token1.balanceOf(owner.address)).to.be.eq(1095);
-      expect(await pool.totalSupply()).to.be.eq(5);
-      expect(await pool.balanceOf(owner.address)).to.be.eq(4);
+      expect(await token0.balanceOf(owner.address)).to.be.eq(1094);
+      expect(await token1.balanceOf(owner.address)).to.be.eq(1092);
+      expect(await pool.totalSupply()).to.be.eq(7);
+      expect(await pool.balanceOf(owner.address)).to.be.eq(6);
+    });
+    it('should remove liquidity eth', async () => {
+      // let preBalance = await ethers.provider.getBalance(owner.address);
+      await token0.approve(ethPool.address, 10);
+      await ethPool.addLiquidityEth(10, owner.address, {value: 7});
+      expect(await ethPool.balanceOf(owner.address)).to.be.eq(8);
+      expect(await ethPool.removeLiquidityEth(2, 1, 1, owner.address)).to.changeEtherBalance(owner.address, 1);
+      // let postBalance = await ethers.provider.getBalance(owner.address);
+      expect(await token0.balanceOf(owner.address)).to.be.eq(1092);
+
+      expect(await ethPool.totalSupply()).to.be.eq(7);
+      expect(await ethPool.balanceOf(owner.address)).to.be.eq(6);
     });
   });
 });
