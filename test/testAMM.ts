@@ -250,9 +250,9 @@ describe("AMM Test", () => {
       let adminBalance = await myPair.balanceOf(admin.address);
       expect(adminBalance).to.be.eq(BigNumber.from(9000))
       // Since admin has contributed 10,000 initially and received 9,000 LP tokens, he attempts to specify 11,000 LP Tokens to be traded in.
-      await expect(myPair.removeLiquidity(9000,10000,8000)).to.be.revertedWith("Insufficient tokenA amount")
+      await expect(myPair.removeLiquidity(9000,10000,8000)).to.be.revertedWith("Insufficient tokenA amount");
 
-      await expect(myPair.removeLiquidity(9000,8000,10000)).to.be.revertedWith("Insufficient tokenB amount")
+      await expect(myPair.removeLiquidity(9000,8000,10000)).to.be.revertedWith("Insufficient tokenB amount");
     })
   })
 
@@ -271,16 +271,25 @@ describe("AMM Test", () => {
     })
 
     it("should take 5000 tokenA from Bob and return him 4000 tokenB.", async () => {
-      // console.log(await myPair.getMarginalPrice());  
+      console.log(await myPair.getMarginalPrice());  
+      // await expect(myPair.connect(Bob).swap(0, 0, Bob.address)).to.be.revertedWith("INSUFFICIENT_INPUT_AMOUNT");
       
-      await token0.connect(Bob).transfer(myPair.address, 5000);
+      await token0.connect(Bob).transfer(myPair.address, 5000);   
+      await expect(myPair.connect(Bob).swap(5001, 0, Bob.address)).to.be.revertedWith("INSUFFICIENT_INPUT_AMOUNT");   
+      await expect(myPair.connect(Bob).swap(0, 0, Bob.address)).to.be.revertedWith("INSUFFICIENT_OUTPUT_AMOUNT");
+      await expect(myPair.connect(Bob).swap(20000, 0, Bob.address)).to.be.revertedWith("INSUFFICIENT_LIQUIDITY");
+      await expect(myPair.connect(Bob).swap(1, 0, token0.address)).to.be.revertedWith("INVALID_TO");
+      await expect(myPair.connect(Bob).swap(1, 0, token1.address)).to.be.revertedWith("INVALID_TO");
+      await expect(myPair.connect(Bob).swap(0, 4001, Bob.address)).to.be.revertedWith("INSUFFICIENT_INPUT_AMOUNT: K");
+
       await expect(myPair.connect(Bob).swap(0, 4000, Bob.address)).to.emit(myPair, 'Swap').withArgs(Bob.address, 5000, 0, 0, 4000, Bob.address);
+      
 
       console.log(await myPair.getMarginalPrice());
 
       await myPair.connect(Alice).removeLiquidity(5000, 0, 0);
-      console.log(await token0.balanceOf(Alice.address));  // should be "around" 5000 
-      console.log(await token1.balanceOf(Alice.address));  // should be "around" 5000 
+      console.log(await token0.balanceOf(Alice.address));  // should be "around" more than 5000 
+      console.log(await token1.balanceOf(Alice.address));  // should be "around" less than 5000 
     })
   })
 
