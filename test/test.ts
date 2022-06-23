@@ -2,7 +2,7 @@ import {expect} from 'chai';
 import {utils, constants} from 'ethers';
 import {ethers, waffle} from 'hardhat';
 import {deploy, evm_revert, evm_snapshot, getContractAt} from './helpers/hardhat-helpers';
-import {Factory, Pool, WETH, ERC20} from '../typechain';
+import {Factory, Pool, WETH, ERC20, GetCodeHash, GetPool} from '../typechain';
 import hre from 'hardhat';
 
 describe('Factory', () => {
@@ -15,6 +15,8 @@ describe('Factory', () => {
   let token0: ERC20;
   let pool: Pool;
   let ethPool: Pool;
+  let test: GetCodeHash;
+  let getPool: GetPool;
   let owner, addr1, addr2, addr3;
   before(async () => {
     globalSnapshotId = await evm_snapshot();
@@ -22,6 +24,8 @@ describe('Factory', () => {
     weth = await getContractAt<WETH>('WETH', '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7');
     token1 = await deploy<ERC20>('ERC20', [100, 'A', 'A', 18]);
     token0 = await deploy<ERC20>('ERC20', [100, 'B', 'B', 18]);
+    test = await deploy<GetCodeHash>('GetCodeHash', []);
+    getPool = await deploy<GetPool>('GetPool', []);
     await token1.mint(owner.address, 1000);
     await token1.mint(addr1.address, 1000);
     await token0.mint(owner.address, 1000);
@@ -152,4 +156,12 @@ describe('Factory', () => {
       expect(await ethPool.balanceOf(owner.address)).to.be.eq(6);
     });
   });
+  it('code hash', async () => {
+    let hash = await test.getInitHash();
+    console.log(hash);
+    let pairAddress = await getPool.pairFor(factory.address, token0.address, token1.address);
+    expect(pairAddress).to.be.eq(pool.address);
+  });
 });
+
+// 0x921bfa93edd589059d4db51153fdfd77e408e4c8a7720aea2c8bec38177ba764

@@ -2,8 +2,9 @@ import {expect} from 'chai';
 import {utils, constants} from 'ethers';
 import {ethers, waffle} from 'hardhat';
 import {deploy, evm_revert, evm_snapshot, getContractAt} from './helpers/hardhat-helpers';
+
 import {Factory, Pool, WETH, ERC20, TestLibrary} from '../typechain';
-import * as CONSTANTS from "./helpers/constants";
+import * as CONSTANTS from './helpers/constants';
 import hre from 'hardhat';
 
 describe('Pool Tests for swaps', () => {
@@ -25,15 +26,13 @@ describe('Pool Tests for swaps', () => {
     let tokenA = await deploy<ERC20>('ERC20', [100, 'B', 'B', 18]);
     let tokenB = await deploy<ERC20>('ERC20', [100, 'A', 'A', 18]);
     factory = await deploy<Factory>('Factory', []);
-    testLib = await deploy<TestLibrary>('TestLibrary', [])
-    
-    
+    testLib = await deploy<TestLibrary>('TestLibrary', []);
     if (tokenA.address < tokenB.address) {
-        token0 = tokenA;
-        token1 = tokenB;
+      token0 = tokenA;
+      token1 = tokenB;
     } else {
-        token0 = tokenB;
-        token1 = tokenA;
+      token0 = tokenB;
+      token1 = tokenA;
     }
 
     await factory.createPool(token1.address, token0.address);
@@ -86,22 +85,22 @@ describe('Pool Tests for swaps', () => {
     });
 
     it('Token address', async () => {
-        let token0Address = await pool.token0();
-        expect(token0Address).to.be.eq(token0.address);
-        let token1Address = await pool.token1();
-        expect(token1Address).to.be.eq(token1.address);
+      let token0Address = await pool.token0();
+      expect(token0Address).to.be.eq(token0.address);
+      let token1Address = await pool.token1();
+      expect(token1Address).to.be.eq(token1.address);
 
-        token0Address = await ethPool.token0();
-        expect(token0Address).to.be.eq(weth.address);
-        token1Address = await ethPool.token1();
-        expect(token1Address).to.be.eq(token0.address);
+      token0Address = await ethPool.token0();
+      expect(token0Address).to.be.eq(weth.address);
+      token1Address = await ethPool.token1();
+      expect(token1Address).to.be.eq(token0.address);
     });
 
     it('isETH', async () => {
-        let isETH = await pool.isETH();
-        expect(isETH).to.be.false;
-        isETH = await ethPool.isETH();
-        expect(isETH).to.be.true;
+      let isETH = await pool.isETH();
+      expect(isETH).to.be.false;
+      isETH = await ethPool.isETH();
+      expect(isETH).to.be.true;
     });
 
     it('Pool address is deterministic and correct', async () => {
