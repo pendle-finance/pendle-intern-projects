@@ -5,7 +5,7 @@ import { deploy, evm_revert, evm_snapshot } from "./helpers/hardhat-helpers";
 import { PRECISION, ZERO_ADDRESS } from "./helpers/Constants";
 import { Factory } from "../typechain";
 
-describe("TestContract", () => {
+xdescribe("FactoryTest", () => {
   const [admin, alice, bob, charlie] = waffle.provider.getWallets();
   let globalSnapshotId;
   let snapshotId;
