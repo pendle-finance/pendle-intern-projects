@@ -32,7 +32,7 @@ contract AMMLPERC20 {
         emit Approval(owner, spender, value);
     }
 
-    function _transfer(address from, address to, uint value) internal {
+    function _transfer(address from, address to, uint value) private {
         balanceOf[from] -= value;
         balanceOf[to]+= value;
         emit Transfer(from, to, value);

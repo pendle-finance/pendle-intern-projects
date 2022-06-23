@@ -108,30 +108,37 @@ describe("AMM Test", () => {
 })
 
   describe("AMM Pair Contract Liquidity Provision", () => {
-    it("should ALLOW Liquidity Provider to successfully add liquidity (10,000 tokenA, 10,000 tokenB) and receive (10,000 - 1000 = 9000) LP tokens", async () => {
+
+    beforeEach(async () => {
       await token0.approve(myPair.address, 100000);
       await token1.approve(myPair.address, 100000);
+    })
+    
+    it("should ALLOW Liquidity Provider to successfully add liquidity (10,000 tokenA, 10,000 tokenB) and receive (10,000 - 1000 = 9000) LP tokens", async () => {
+  
       await myPair.addLiquidity(10000,10000,10000,10000);
 
     });
 
     it("should EMIT Mint event when a liquidity provider successfully adds liquidity to the pool", async () => {
-      await token0.approve(myPair.address, 100000);
-      await token1.approve(myPair.address, 100000);
+
       await expect(myPair.addLiquidity(10000,10000,10000,10000)).to.emit(myPair, 'Mint').withArgs(admin.address, 10000, 10000);
 
     });
 
+    it("should REVERT when a Liquidity Provider specifies a ZERO amount of token A or token B.", async () => {
+    
+       await expect(myPair.addLiquidity(0,0,0,0)).to.be.revertedWith("Invalid desired amount");
+ 
+     });
+
+
     it("should REVERT when a Liquidity Provider to successfully add liquidity (1000 tokenA, 1000 tokenB) since its lower than the minimum liquidity threshold.", async () => {
-      await token0.approve(myPair.address, 100000);
-      await token1.approve(myPair.address, 100000);
-     
      await expect(myPair.addLiquidity(1000,1000,1000,1000)).to.be.revertedWith("Insufficient liquidity");
     });
 
     it("should MINT LP Tokens proportional to the contribution of the pool after liquidity has been added.", async () => {
-      await token0.approve(myPair.address, 100000);
-      await token1.approve(myPair.address, 100000);
+
      
       await expect(myPair.addLiquidity(10000,10000,10000,10000)).to.emit(myPair, 'Mint').withArgs(admin.address, 10000, 10000);
 
@@ -139,8 +146,32 @@ describe("AMM Test", () => {
       await token1.connect(Alice).approve(myPair.address, 100000);
      
       await expect(myPair.connect(Alice).addLiquidity(10000,10000,9000,9000)).to.emit(myPair, 'Mint').withArgs(Alice.address, 10000, 10000);
-           console.log("Alice LP Balance",await myPair.balanceOf(Alice.address));
     });
+
+    it("should REVERT when a Liquidity Provider specifies a Minimum Amount of token B GREATER than the desired amount of token B.", async () => {
+     // Admin adds liquidity to the pool:
+     await myPair.addLiquidity(10000,10000,10000,10000);
+     // Alice adds to the pool while specifying minAmtB > optimalAmountB
+      await expect(myPair.connect(Alice).addLiquidity(9000,9000,9000,10000)).to.be.revertedWith("Insufficient B Amount");
+
+    });
+
+    
+    it("should REVERT when a Liquidity Provider specifies a Minimum Amount of token A GREATER than the desired amount of token A should optimal Amount B be GREATER than desiredAmtB.", async () => {
+      // Admin adds liquidity to the pool:
+      await myPair.addLiquidity(10000,10000,10000,10000);
+     
+       await expect(myPair.connect(Alice).addLiquidity(9000,5000,10000,5000)).to.be.revertedWith("Insufficient A Amount");
+     });
+
+     it("should REVERT when a Liquidity Provider specifies a minimum amount of token A or token B LESS than his/her balance of the token", async () => {
+      let adminBalanceToken0 = await token0.balanceOf(admin.address);
+
+      expect(adminBalanceToken0).to.be.eq(BigNumber.from(80000))
+      // Admin adds 100,000 of tokenA and tokenB as desired
+      await expect(myPair.addLiquidity(100000,100000,10000,10000)).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+ 
+     });
   })
 
 
@@ -174,6 +205,11 @@ describe("AMM Test", () => {
     })
 
     it("should ALLOW Liquidity Provider to successfully remove liquidity by trading in LP Tokens and receive tokenA & tokenB proportionally.", async () => {
+
+      await expect(myPair.removeLiquidity(9000, 0,0)).to.emit(myPair, "Burn").withArgs(admin.address, BigNumber.from(9000), BigNumber.from(9000), admin.address)
+    })
+
+    it("should ALLOW Liquidity Provider to successfully remove liquidity by trading in LP Tokens and receive tokenA & tokenB proportionally.", async () => {
       let initialToken0AdminBalance = await token0.balanceOf(admin.address);
       let initialToken1AdminBalance = await token1.balanceOf(admin.address);
       await myPair.removeLiquidity(9000, 0,0)
@@ -197,6 +233,27 @@ describe("AMM Test", () => {
       // console.log("Alice token0 Balance",await token0.balanceOf(Alice.address));
       // console.log("Alice token1 Balance",await token1.balanceOf(Alice.address));
     })
+    
+
+    it("should REVERT if a Liquidity Provide specifies to remove ZERO liquidity", async () => {
+      await expect(myPair.removeLiquidity(0,0,0)).to.be.revertedWith("Insufficient liquidity burnt")
+    })
+
+    it("should REVERT if a Liquidity Provide specifies to remove an amount of liquidity MORE than he contributed.", async () => {
+      let adminBalance = await myPair.balanceOf(admin.address);
+      expect(adminBalance).to.be.eq(BigNumber.from(9000))
+      // Since admin has contributed 10,000 initially and received 9,000 LP tokens, he attempts to specify 11,000 LP Tokens to be traded in.
+      await expect(myPair.removeLiquidity(10000,0,0)).to.be.revertedWith("Insufficient LP Tokens")
+    })
+
+    it("should REVERT if a Liquidity Provide specifies to remove an MINIMUM amount of liquidity MORE than he contributed.", async () => {
+      let adminBalance = await myPair.balanceOf(admin.address);
+      expect(adminBalance).to.be.eq(BigNumber.from(9000))
+      // Since admin has contributed 10,000 initially and received 9,000 LP tokens, he attempts to specify 11,000 LP Tokens to be traded in.
+      await expect(myPair.removeLiquidity(9000,10000,8000)).to.be.revertedWith("Insufficient tokenA amount")
+
+      await expect(myPair.removeLiquidity(9000,8000,10000)).to.be.revertedWith("Insufficient tokenB amount")
+    })
   })
 
   describe("AMM Pair Contract Liquidity Swap", () => {
@@ -214,7 +271,7 @@ describe("AMM Test", () => {
     })
 
     it("should take 5000 tokenA from Bob and return him 4000 tokenB.", async () => {
-      console.log(await myPair.getMarginalPrice());  
+      // console.log(await myPair.getMarginalPrice());  
       
       await token0.connect(Bob).transfer(myPair.address, 5000);
       await expect(myPair.connect(Bob).swap(0, 4000, Bob.address)).to.emit(myPair, 'Swap').withArgs(Bob.address, 5000, 0, 0, 4000, Bob.address);

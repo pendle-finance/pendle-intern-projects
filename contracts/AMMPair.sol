@@ -5,6 +5,7 @@ pragma solidity ^0.8.11;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 // SafeERC20
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // AMM LP ERC20:
 import "./AMMLPERC20.sol";
 import "./interfaces/IAMMPair.sol";
@@ -78,8 +79,8 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
     (amountA, amountB) = _addLiquidity(desiredAmtA, desiredAmtB, minAmtA, minAmtB);
 
     // Transfer both tokens to the Pair contract:
-    token0.transferFrom( msg.sender, address(this), amountA);
-    token1.transferFrom( msg.sender, address(this), amountB);
+   SafeERC20.safeTransferFrom(token0, msg.sender, address(this), amountA);
+    SafeERC20.safeTransferFrom(token1, msg.sender, address(this), amountB);
 
     lpLiquidity = _mintLP(msg.sender);
   }
@@ -89,9 +90,9 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
         uint lpLiquidity,
         uint minAmtA,
         uint minAmtB) external virtual returns(uint amountA, uint amountB){
+          require(balanceOf[msg.sender] >= lpLiquidity, "Insufficient LP Tokens");
             // Send LP Liquidity back to pair contract:
-         _transfer( msg.sender, address(this), lpLiquidity);
-
+          SafeERC20.safeTransferFrom(IERC20(address(this)), msg.sender, address(this), lpLiquidity);
            // Burn LP Tokens to receive back proportional tokenA and tokenB
            (amountA, amountB) = _burnLP(msg.sender);
 
@@ -102,7 +103,7 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
 
     // @Desc: Internal function to calculate the 2 optimal amounts based on the underlying/prevailing reserves of the pool
    function _addLiquidity(uint desiredAmtA, uint desiredAmtB, uint minAmtA, uint minAmtB ) internal virtual returns(uint amountA, uint amountB) {
-
+    require(desiredAmtA > 0 && desiredAmtB > 0, "Invalid desired amount");
     // Retrieve reserves from the pair contract:
     (uint _reserve0, uint _reserve1) = getReserves();
 
