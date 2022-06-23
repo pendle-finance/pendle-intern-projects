@@ -2,7 +2,7 @@ import {expect} from 'chai';
 import {utils, constants} from 'ethers';
 import {ethers, waffle} from 'hardhat';
 import {deploy, evm_revert, evm_snapshot, getContractAt} from './helpers/hardhat-helpers';
-import {Factory, Pool, WETH, ERC20, AMMLibrary} from '../typechain';
+import {Factory, Pool, WETH, ERC20, TestLibrary} from '../typechain';
 import * as CONSTANTS from "./helpers/constants";
 import hre from 'hardhat';
 
@@ -16,6 +16,8 @@ describe('Pool Tests for swaps', () => {
   let token0: ERC20;
   let pool: Pool;
   let ethPool: Pool;
+  let testLib: TestLibrary;
+
   before(async () => {
     globalSnapshotId = await evm_snapshot();
 
@@ -23,6 +25,8 @@ describe('Pool Tests for swaps', () => {
     let tokenA = await deploy<ERC20>('ERC20', [100, 'B', 'B', 18]);
     let tokenB = await deploy<ERC20>('ERC20', [100, 'A', 'A', 18]);
     factory = await deploy<Factory>('Factory', []);
+    testLib = await deploy<TestLibrary>('TestLibrary', [])
+    
     
     if (tokenA.address < tokenB.address) {
         token0 = tokenA;
@@ -97,7 +101,8 @@ describe('Pool Tests for swaps', () => {
     });
 
     it('Pool address is deterministic and correct', async () => {
-        
+        let pairAddress = await testLib.pairFor(factory.address,token0.address,token1.address);
+        expect(pairAddress).to.be.eq(pool.address);
     });
     
 
