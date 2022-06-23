@@ -12,7 +12,7 @@
     "./scripts",
     "./test",
     "./typechain"
-  ],
+, "./script"  ],
   "files": [
     "./hardhat.config.ts"
   ]
