@@ -12,7 +12,7 @@ import "./Pair.sol";
  */
 
 library PairHelper {
-    function provideLiquidityByToken(Pair pair, uint amount) external {
+    function provideLiquidityByToken(Pair pair, uint256 amount) external {
         uint256 totalSupply = pair.totalSupply();
         require(totalSupply > 0, "Pair.pLBT: totalSupply = 0");
 
@@ -23,7 +23,7 @@ library PairHelper {
         );
     }
 
-    function removeLiquidityByToken(Pair pair, uint amount) external {
+    function removeLiquidityByToken(Pair pair, uint256 amount) external {
         uint256 totalSupply = pair.totalSupply();
 
         (uint256 balance0, uint256 balance1, ) = pair.getReserves();
