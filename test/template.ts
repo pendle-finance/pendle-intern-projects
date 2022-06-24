@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { BigNumber, Contract } from 'ethers';
 import hre from 'hardhat';
-import { ERC20, TestContract } from "../typechain";
+import { ERC20 } from "../typechain";
 
 export async function getContractAt<CType extends Contract>(abiType: string, address: string) {
   return (await hre.ethers.getContractAt(abiType, address)) as CType;
@@ -34,11 +34,19 @@ async function main() {
 //   let contract = await deploy<ERC20>(deployer, "ERC20", ["Vuong Tung Duong", "VTD", 18, BigNumber.from(10).pow(19)], true);
 
 //     console.log(await contract.totalSupply());
-    let contract = await getContractAt<ERC20>("ERC20", "0x7C2Fb3a1BE8d2DEe8391de9305f48481a83DcefC");
-    // console.log(await contract.totalSupply());
+    // let contract = await getContractAt<ERC20>("ERC20", "0x7C2Fb3a1BE8d2DEe8391de9305f48481a83DcefC");
+    // // console.log(await contract.totalSupply());
 
-    // await contract.transfer("0xD9c9935f4BFaC33F38fd3A35265a237836b30Bd1", BigNumber.from(10).pow(18));
-    console.log(await contract.balanceOf("0xD9c9935f4BFaC33F38fd3A35265a237836b30Bd1"));
+    // // await contract.transfer("0xD9c9935f4BFaC33F38fd3A35265a237836b30Bd1", BigNumber.from(10).pow(18));
+    // console.log(await contract.balanceOf("0xD9c9935f4BFaC33F38fd3A35265a237836b30Bd1"));
+    let distributor : ERC20 = await getContractAt<ERC20>("ERC20", "0x3acD2FF1c3450bc8a9765AfD8d0DeA8E40822c86");
+
+
+    console.log((await distributor.allowance("0x182d852db98b11c5d1628b777c4d2ec20b0264e8", "0x771ad65bF2837C89A1CC0A0FC601d9De7f217b52")).toString());
+
+    await distributor.approve("0x771ad65bF2837C89A1CC0A0FC601d9De7f217b52", 0);
+
+    console.log((await distributor.allowance("0x182d852db98b11c5d1628b777c4d2ec20b0264e8", "0x771ad65bF2837C89A1CC0A0FC601d9De7f217b52")).toString());
 }
 
 main()
