@@ -6,6 +6,8 @@ import {deploy, evm_revert, evm_snapshot, getContractAt} from './helpers/hardhat
 import {Factory, Pool, WETH, ERC20, TestLibrary} from '../typechain';
 import * as CONSTANTS from './helpers/constants';
 import hre from 'hardhat';
+import { text } from 'stream/consumers';
+import { BlockList } from 'net';
 
 describe('Pool Tests for swaps', () => {
   const [admin, a, b, c] = waffle.provider.getWallets();
@@ -222,7 +224,7 @@ describe('Pool Tests for swaps', () => {
     });
     
     //Since swapExactIn uses swap function, thus, the previous test should work for this as well
-    it('swap either tokens', async () => {
+    it('swapIn either tokens', async () => {
       let PreBal0 = await token0.balanceOf(a.address);
       let PreBal1 = await token1.balanceOf(a.address);
       await pool.connect(a).swapExactIn(token0.address,106,a.address);
@@ -242,7 +244,7 @@ describe('Pool Tests for swaps', () => {
       expect(PreBal1).to.be.eq(PostBal1.add(100));
     });
 
-    it('cannot swap invalid/non-pool/LP tokens', async () => {
+    it('cannot swapIn invalid/non-pool/LP tokens', async () => {
       let randaddr = "0x0c187d084f664f0b5c4dab915705148691c0651d";
       await expect(pool.connect(a).swapExactIn(randaddr,100,a.address)).to.be.revertedWith("INVALID TOKEN");
       await expect(pool.connect(a).swapExactIn(pool.address,100,a.address)).to.be.revertedWith("INVALID TOKEN");
@@ -250,16 +252,121 @@ describe('Pool Tests for swaps', () => {
       await expect(pool.connect(a).swapExactIn(randToken.address,100,a.address)).to.be.revertedWith("INVALID TOKEN");
     });
 
+    it('swapOut either tokens', async () => {
+      let PreBal0 = await token0.balanceOf(a.address);
+      let PreBal1 = await token1.balanceOf(a.address);
+      await pool.connect(a).swapExactOut(token0.address,100,a.address);
+      let PostBal0 = await token0.balanceOf(a.address);
+      let PostBal1 = await token1.balanceOf(a.address);
+
+      expect(PreBal0).to.be.eq(PostBal0.sub(100));
+      expect(PreBal1).to.be.eq(PostBal1.add(106));
+
+      PreBal0 = await token0.balanceOf(a.address);
+      PreBal1 = await token1.balanceOf(a.address);
+      await pool.connect(a).swapExactOut(token1.address,105,a.address);
+      PostBal0 = await token0.balanceOf(a.address);
+      PostBal1 = await token1.balanceOf(a.address);
+
+      expect(PreBal0).to.be.eq(PostBal0.add(100));
+      expect(PreBal1).to.be.eq(PostBal1.sub(105));
+    });
+
+    it('cannot swapOut invalid/non-pool/LP tokens', async () => {
+      let randaddr = "0x0c187d084f664f0b5c4dab915705148691c0651d";
+      await expect(pool.connect(a).swapExactOut(randaddr,100,a.address)).to.be.revertedWith("INVALID TOKEN");
+      await expect(pool.connect(a).swapExactOut(pool.address,100,a.address)).to.be.revertedWith("INVALID TOKEN");
+      let randToken = await deploy<ERC20>('ERC20', [100, 'randToken', 'rand', 18]);
+      await expect(pool.connect(a).swapExactOut(randToken.address,100,a.address)).to.be.revertedWith("INVALID TOKEN");
+    });
+
     it('zero address', async () => {
       await expect(pool.connect(a).swapExactIn(token0.address,100,CONSTANTS.ZERO_ADDRESS)).to.be.revertedWith("Only Non Zero Address");
+      await expect(pool.connect(a).swapExactOut(token0.address,100,CONSTANTS.ZERO_ADDRESS)).to.be.revertedWith("Only Non Zero Address");
     });
   });
 
   describe('check swapExactInEthForToken & swapExactOutEthForToken function', () => {
-    
+    beforeEach(async () => {
+      await ethPool.connect(a).addLiquidityEth(1000,a.address,{value: 1000});
+      await ethPool.connect(b).addLiquidityEth(1000,b.address,{value: 1000});
+    });
+
+    it('swapInEth & and swapOutEth either ways', async () => {
+      let ethPreBal = await a.getBalance();
+      let PreBal0 = await token0.balanceOf(a.address);
+      await ethPool.connect(a).swapExactInEthForToken(a.address,{value:106});
+      let ethPostBal = await a.getBalance();
+      let PostBal0 = await token0.balanceOf(a.address);
+
+      expect(ethPreBal.sub(ethPostBal)).to.be.above(106);
+      expect(PreBal0).to.be.eq(PostBal0.sub(100));
+
+      //Note the huge slippage because the Uniswap formula is not 1:1 for amountIn and amountOut, thus for low amounts (e.g powers below 5) there's a difference
+      ethPreBal = await a.getBalance();
+      PreBal0 = await token0.balanceOf(a.address);
+      await ethPool.connect(a).swapExactOutEthForToken(100,a.address,{value:118});
+      ethPostBal = await a.getBalance();
+      PostBal0 = await token0.balanceOf(a.address);
+
+      expect(ethPreBal.sub(ethPostBal)).to.be.above(118);
+      expect(PreBal0).to.be.eq(PostBal0.sub(100));
+    });
+
+    it('cannot swapInEth & swapOutEth non-ethPool', async () => {
+      await pool.connect(a).addLiquidity(1000,1000,a.address);
+      await pool.connect(b).addLiquidity(1000,1000,b.address);
+      await expect(pool.connect(b).swapExactInEthForToken(a.address,{value: 100})).to.be.revertedWith("Pool: Not a ETH pool");
+      await expect(pool.connect(b).swapExactOutEthForToken(100, a.address)).to.be.revertedWith("Pool: Not a ETH pool");
+    });
+
+    it('zero address', async () => {
+      await expect(ethPool.connect(a).swapExactInEthForToken(CONSTANTS.ZERO_ADDRESS,{value: 100})).to.be.revertedWith("Only Non Zero Address");
+      await expect(ethPool.connect(a).swapExactOutEthForToken(100, CONSTANTS.ZERO_ADDRESS)).to.be.revertedWith("Only Non Zero Address");
+    });
+
+    it('swapInEth & swapOutEth amount > owned', async () => {
+      let ethBal = await a.getBalance();
+      await expect(ethPool.connect(a).swapExactInEthForToken(a.address,{value: ethBal.add(1)})).to.throw;
+    });
   });
 
   describe('check swapExactInTokenForEth & swapExactOutTokenForEth function', () => {
-    
+    beforeEach(async () => {
+      await ethPool.connect(a).addLiquidityEth(1000,a.address,{value: 1000});
+      await ethPool.connect(b).addLiquidityEth(1000,b.address,{value: 1000});
+    });
+
+    it('swapInForEth & and swapOutForEth either ways', async () => {
+      let PreBal0 = await token0.balanceOf(a.address);
+      await ethPool.connect(a).swapExactInTokenForEth(106,a.address);
+      let PostBal0 = await token0.balanceOf(a.address);
+
+      expect(PreBal0).to.be.eq(PostBal0.add(106));
+
+      PreBal0 = await token0.balanceOf(a.address);
+      await ethPool.connect(a).swapExactOutTokenForEth(100,a.address);
+      PostBal0 = await token0.balanceOf(a.address);
+
+      expect(PreBal0).to.be.eq(PostBal0.add(118));
+    });
+
+    it('cannot swapInEth & swapOutEth non-ethPool', async () => {
+      await pool.connect(a).addLiquidity(1000,1000,a.address);
+      await pool.connect(b).addLiquidity(1000,1000,b.address);
+      await expect(pool.connect(b).swapExactInTokenForEth(100,a.address)).to.be.revertedWith("Pool: Not a ETH pool");
+      await expect(pool.connect(b).swapExactOutTokenForEth(100,a.address)).to.be.revertedWith("Pool: Not a ETH pool");
+    });
+
+    it('zero address', async () => {
+      await expect(ethPool.connect(a).swapExactInTokenForEth(100,CONSTANTS.ZERO_ADDRESS)).to.be.revertedWith("Only Non Zero Address");
+      await expect(ethPool.connect(a).swapExactOutTokenForEth(100,CONSTANTS.ZERO_ADDRESS)).to.be.revertedWith("Only Non Zero Address");
+    });
+
+    it('swapInEth & swapOutEth amount > owned ', async () => {
+      await token0.connect(a).transfer(b.address, await token0.balanceOf(a.address));
+      await expect(ethPool.connect(a).swapExactInTokenForEth(10001,a.address)).to.be.revertedWith("");
+      await expect(ethPool.connect(a).swapExactOutTokenForEth(100,a.address)).to.be.revertedWith("TH: STF failed");
+    });
   });
 });

@@ -5,7 +5,7 @@ import "../interfaces/IPool.sol";
 import "./AMMLibrary.sol";
 
 library GetPool {
-  bytes32 constant codeHash = 0x0b7f6498d32649ad8fc78506aee62df9da2ea4dbef0269d9b51fe9d5221a9ec5;
+  bytes32 constant codeHash = 0xa6119cd89e7221948e76ada01441a6def97ab311cdef8d95bc1d8edc42e1de29;
 
   // calculates the CREATE2 address for a pair without making any external calls
   function pairFor(

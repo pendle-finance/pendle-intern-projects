@@ -307,10 +307,11 @@ contract Pool is IPool, PoolERC20 {
     uint256 amountOut,
     address to
   ) external override nonZeroAddress(to) onlyValidToken(token) {
-    (uint256 reserveIn, uint256 reserveOut, address tokenIn, address tokenOut) = _findWhichToken(
+    //reverse the order because swapOut
+    (uint256 reserveOut, uint256 reserveIn, address tokenOut, address tokenIn) = _findWhichToken(
       token
     );
-    uint256 amountIn = uint256(AMMLibrary.getAmountIn(amountOut, reserveIn, reserveOut, 0));
+    uint256 amountIn = AMMLibrary.getAmountIn(amountOut, reserveIn, reserveOut, 0);
     TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), amountIn);
     if (tokenOut == token0) swap(amountOut, 0, to);
     else swap(0, amountOut, to);
@@ -324,7 +325,7 @@ contract Pool is IPool, PoolERC20 {
   {
     (uint256 _reserve0, uint256 _reserve1) = getReserves();
     require(amount < _reserve1, "POOL: INSUFFICIENT LIQUIDITY");
-    uint256 amountIn = uint256(AMMLibrary.getAmountIn(amount, _reserve0, _reserve1, 0));
+    uint256 amountIn = AMMLibrary.getAmountIn(amount, _reserve0, _reserve1, 0);
     require(msg.value >= amountIn, "INSUFFICIENT ETH");
     IWETH(token0).deposit{value: amountIn}();
     if (msg.value - amountIn > 0) {
@@ -351,7 +352,7 @@ contract Pool is IPool, PoolERC20 {
     uint256 amountIn,
     uint256 amountOut
   ) private {
-    TransferHelper.safeTransferFrom(token1, msg.sender, to, amountIn);
+    TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amountIn);
     IWETH(token0).withdraw(amountOut);
     payable(to).transfer(amountOut);
     _update(0, amountIn, amountOut, 0);

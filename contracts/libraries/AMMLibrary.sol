@@ -52,7 +52,7 @@ library AMMLibrary {
     require(amountOut > 0, "AMMLibrary: INSUFFICIENT_OUTPUT_AMOUNT");
     require(reserveIn > 0 && reserveOut > 0, "AMMLibrary: INSUFFICIENT_LIQUIDITY");
     uint256 numerator = reserveIn * amountOut * 1000;
-    uint256 denominator = reserveOut - (amountOut * (1000 - fee));
+    uint256 denominator = (reserveOut - amountOut) * (1000 - fee);
     amountIn = (numerator / denominator) + (1);
   }
 }
