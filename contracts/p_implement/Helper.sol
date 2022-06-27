@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.11;
 
-import "../interface/ILPPair.sol";
 import "../interface/ILPFactory.sol";
+import "../interface/ILPPair.sol";
 
 contract Helper {
 
-  function min(address tokenA, address tokenB) internal pure returns (address) {
+  function min(address tokenA, address tokenB) public pure returns (address) {
     return tokenA < tokenB ? tokenA : tokenB;
   }
 
