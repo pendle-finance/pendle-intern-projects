@@ -13,8 +13,8 @@ contract Pool is IPool, PoolERC20 {
   uint256 public constant override MINIMUM_LIQUIDITY = 1;
 
   address public override factory;
-  address public override token0;
-  address public override token1;
+  address public immutable override token0;
+  address public immutable override token1;
 
   uint256 private reserve0;
   uint256 private reserve1;
@@ -68,7 +68,7 @@ contract Pool is IPool, PoolERC20 {
     _reserve1 = reserve1;
   }
 
-  function mint(
+  function _mintLiquidity(
     address to,
     uint256 amount0,
     uint256 amount1
@@ -124,7 +124,7 @@ contract Pool is IPool, PoolERC20 {
     (amount0In, amount1In) = _addLiquidity(amount0, amount1);
     TransferHelper.safeTransferFrom(token0, msg.sender, address(this), amount0In);
     TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount1In);
-    liquidity = uint256(mint(to, amount0In, amount1In));
+    liquidity = uint256(_mintLiquidity(to, amount0In, amount1In));
   }
 
   function addLiquidityEth(uint256 amount, address to)
@@ -145,7 +145,7 @@ contract Pool is IPool, PoolERC20 {
     }
     IWETH(token0).deposit{value: amountEth}();
     TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amountToken);
-    liquidity = mint(to, amountEth, amountToken);
+    liquidity = _mintLiquidity(to, amountEth, amountToken);
   }
 
   function _removeLiquidity(

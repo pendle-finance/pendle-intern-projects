@@ -156,12 +156,12 @@ describe('Factory', () => {
       expect(await ethPool.balanceOf(owner.address)).to.be.eq(6);
     });
   });
-  it('code hash', async () => {
-    let hash = await test.getInitHash();
-    console.log(hash);
-    let pairAddress = await getPool.pairFor(factory.address, token0.address, token1.address);
-    expect(pairAddress).to.be.eq(pool.address);
-  });
+  // it('code hash', async () => {
+  //   let hash = await test.getInitHash();
+  //   console.log(hash);
+  //   let pairAddress = await getPool.pairFor(factory.address, token0.address, token1.address);
+  //   expect(pairAddress).to.be.eq(pool.address);
+  // });
 });
 
 // 0x921bfa93edd589059d4db51153fdfd77e408e4c8a7720aea2c8bec38177ba764
