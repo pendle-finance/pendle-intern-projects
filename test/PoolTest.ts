@@ -27,7 +27,7 @@ describe('Pool Tests for swaps', () => {
     weth = await getContractAt<WETH>('WETH', '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7');
     let tokenA = await deploy<ERC20>('ERC20', [100, 'B', 'B', 18]);
     let tokenB = await deploy<ERC20>('ERC20', [100, 'A', 'A', 18]);
-    factory = await deploy<Factory>('Factory', []);
+    factory = await deploy<Factory>('Factory', ['0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7']);
     testLib = await deploy<TestLibrary>('TestLibrary', []);
     if (tokenA.address < tokenB.address) {
       token0 = tokenA;

@@ -30,7 +30,7 @@ describe('Factory', () => {
     await token1.mint(addr1.address, 1000);
     await token0.mint(owner.address, 1000);
     await token0.mint(addr1.address, 1000);
-    factory = await deploy<Factory>('Factory', []);
+    factory = await deploy<Factory>('Factory', ['0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7']);
     await factory.createPool(token1.address, token0.address);
     let poolAddresss = await factory.getPool(token1.address, token0.address);
     pool = await getContractAt<Pool>('Pool', poolAddresss);
