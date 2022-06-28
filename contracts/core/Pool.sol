@@ -53,19 +53,51 @@ contract Pool is IPool, PoolERC20 {
 
   receive() external payable {}
 
-  function _update(
-    uint112 amount0In,
-    uint112 amount1In,
-    uint112 amount0Out,
-    uint112 amount1Out
-  ) internal {
-    reserve0 = reserve0 + amount0In - amount0Out;
-    reserve1 = reserve1 + amount1In - amount1Out;
-  }
-
   function getReserves() public view override returns (uint112 _reserve0, uint112 _reserve1) {
     _reserve0 = reserve0;
     _reserve1 = reserve1;
+  }
+
+  function addLiquidity(
+    uint112 amount0,
+    uint112 amount1,
+    address to
+  )
+    external
+    override
+    nonZeroAddress(to)
+    lock
+    returns (
+      uint112 amount0In,
+      uint112 amount1In,
+      uint256 liquidity
+    )
+  {
+    (amount0In, amount1In, liquidity) = _calcAddLiquidity(amount0, amount1, to);
+    TransferHelper.safeTransferFrom(token0, msg.sender, address(this), amount0In);
+    TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount1In);
+    // liquidity = _mintLiquidity(to, amount0In, amount1In);
+  }
+
+  function addLiquidityEth(uint112 amount, address to)
+    external
+    payable
+    nonZeroAddress(to)
+    lock
+    onlyEthPool
+    returns (
+      uint112 amountEth,
+      uint112 amountToken,
+      uint256 liquidity
+    )
+  {
+    (amountEth, amountToken, liquidity) = _calcAddLiquidity(uint112(msg.value), amount, to);
+    if (amountEth < msg.value) {
+      payable(msg.sender).transfer(msg.value - amountEth);
+    }
+    IWETH(token0).deposit{value: amountEth}();
+    TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amountToken);
+    // liquidity = _mintLiquidity(to, amountEth, amountToken);
   }
 
   function _calcAddLiquidity(
@@ -115,46 +147,31 @@ contract Pool is IPool, PoolERC20 {
     return (optimalAmount0, optimalAmount1, liquidity);
   }
 
-  function addLiquidity(
-    uint112 amount0,
-    uint112 amount1,
+  function removeLiquidity(
+    uint256 liquidity,
+    uint112 amount0Min,
+    uint112 amount1Min,
     address to
-  )
-    external
-    override
-    nonZeroAddress(to)
-    lock
-    returns (
-      uint112 amount0In,
-      uint112 amount1In,
-      uint256 liquidity
-    )
-  {
-    (amount0In, amount1In, liquidity) = _calcAddLiquidity(amount0, amount1, to);
-    TransferHelper.safeTransferFrom(token0, msg.sender, address(this), amount0In);
-    TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount1In);
-    // liquidity = _mintLiquidity(to, amount0In, amount1In);
+  ) public override nonZeroAddress(to) returns (uint112 amount0, uint112 amount1) {
+    (amount0, amount1) = _removeLiquidity(liquidity, amount0Min, amount1Min);
+    TransferHelper.safeTransfer(token0, to, amount0);
+    TransferHelper.safeTransfer(token1, to, amount1);
+    _update(0, 0, amount0, amount1);
+    emit Burn(msg.sender, amount0, amount1, to);
   }
 
-  function addLiquidityEth(uint112 amount, address to)
-    external
-    payable
-    nonZeroAddress(to)
-    lock
-    onlyEthPool
-    returns (
-      uint112 amountEth,
-      uint112 amountToken,
-      uint256 liquidity
-    )
-  {
-    (amountEth, amountToken, liquidity) = _calcAddLiquidity(uint112(msg.value), amount, to);
-    if (amountEth < msg.value) {
-      payable(msg.sender).transfer(msg.value - amountEth);
-    }
-    IWETH(token0).deposit{value: amountEth}();
-    TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amountToken);
-    // liquidity = _mintLiquidity(to, amountEth, amountToken);
+  function removeLiquidityEth(
+    uint256 liquidity,
+    uint112 amountEthMin,
+    uint112 amountTokenMin,
+    address to
+  ) public onlyEthPool nonZeroAddress(to) returns (uint112 amountEth, uint112 amountToken) {
+    (amountEth, amountToken) = _removeLiquidity(liquidity, amountEthMin, amountTokenMin);
+    IWETH(token0).withdraw(amountEth);
+    payable(to).transfer(amountEth);
+    TransferHelper.safeTransfer(token1, to, amountToken);
+    _update(0, 0, amountEth, amountToken);
+    emit Burn(msg.sender, amountEth, amountToken, to);
   }
 
   function _removeLiquidity(
@@ -173,65 +190,6 @@ contract Pool is IPool, PoolERC20 {
     require(amount1 >= amount1Min, "POOL: INVALID AMOUNT1");
     _burn(msg.sender, liquidity);
   }
-
-  function removeLiquidity(
-    uint256 liquidity,
-    uint112 amount0Min,
-    uint112 amount1Min,
-    address to
-  ) public override nonZeroAddress(to) returns (uint112 amount0, uint112 amount1) {
-    (amount0, amount1) = _removeLiquidity(liquidity, amount0Min, amount1Min);
-    TransferHelper.safeTransfer(token0, to, amount0);
-    TransferHelper.safeTransfer(token1, to, amount1);
-    _update(0, 0, amount0, amount1);
-    emit Burn(msg.sender, amount0, amount1, to);
-  }
-
-  function removeLiquidityWithPermit(
-    uint256 liquidity,
-    uint112 amount0Min,
-    uint112 amount1Min,
-    address to,
-    uint256 deadline,
-    bool approveMax,
-    uint8 v,
-    bytes32 r,
-    bytes32 s
-  ) external returns (uint112 amount0, uint112 amount1) {
-    uint256 value = approveMax ? (type(uint256).max) : liquidity;
-    permit(msg.sender, address(this), value, deadline, v, r, s);
-    (amount0, amount1) = removeLiquidity(liquidity, amount0Min, amount1Min, to);
-  }
-
-  function removeLiquidityEth(
-    uint256 liquidity,
-    uint112 amountEthMin,
-    uint112 amountTokenMin,
-    address to
-  ) public onlyEthPool nonZeroAddress(to) returns (uint112 amountEth, uint112 amountToken) {
-    (amountEth, amountToken) = _removeLiquidity(liquidity, amountEthMin, amountTokenMin);
-    IWETH(token0).withdraw(amountEth);
-    payable(to).transfer(amountEth);
-    TransferHelper.safeTransfer(token1, to, amountToken);
-    _update(0, 0, amountEth, amountToken);
-    emit Burn(msg.sender, amountEth, amountToken, to);
-  }
-
-  // function removeLiquidityEthWithPermit(
-  //   uint256 liquidity,
-  //   uint112 amountEthMin,
-  //   uint112 amountTokenMin,
-  //   address to,
-  //   uint256 deadline,
-  //   bool approveMax,
-  //   uint8 v,
-  //   bytes32 r,
-  //   bytes32 s
-  // ) external returns (uint112 amount0, uint112 amount1) {
-  //   uint256 value = approveMax ? (type(uint256).max) : liquidity;
-  //   permit(msg.sender, address(this), value, deadline, v, r, s);
-  //   (amount0, amount1) = removeLiquidityEth(liquidity, amountEthMin, amountTokenMin, to);
-  // }
 
   ///@dev Your flash swap, might as well make all swaps use a flash swap since we're at it
   function swap(
@@ -392,5 +350,15 @@ contract Pool is IPool, PoolERC20 {
       tokenIn = token1;
       tokenOut = token0;
     }
+  }
+
+  function _update(
+    uint112 amount0In,
+    uint112 amount1In,
+    uint112 amount0Out,
+    uint112 amount1Out
+  ) internal {
+    reserve0 = reserve0 + amount0In - amount0Out;
+    reserve1 = reserve1 + amount1In - amount1Out;
   }
 }
