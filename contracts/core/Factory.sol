@@ -5,11 +5,12 @@ import "../libraries/AMMLibrary.sol";
 import "./Pool.sol";
 
 contract Factory is IFactory {
-  address public immutable WETH = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
+  address public immutable WETH;
+  // 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7
   struct Params {
     address token0;
     address token1;
-    bool isEth;
+    address WETH;
   }
   address[] public pools;
   mapping(address => mapping(address => address)) public override getPool;
@@ -17,8 +18,9 @@ contract Factory is IFactory {
 
   // event PoolCreated(address indexed token0, address indexed token1, address pair, uint256);
 
-  constructor() {
-    // require(_WETH != address(0), "Invalid address");
+  constructor(address _WETH) {
+    require(_WETH != address(0), "Invalid address");
+    WETH = _WETH;
   }
 
   function getParams()
@@ -28,12 +30,12 @@ contract Factory is IFactory {
     returns (
       address token0,
       address token1,
-      bool isEth
+      address weth
     )
   {
     token0 = params.token0;
     token1 = params.token1;
-    isEth = params.isEth;
+    weth = params.WETH;
   }
 
   function allPoolLength() external view override returns (uint256) {
@@ -51,7 +53,7 @@ contract Factory is IFactory {
       token1 = token0;
       token0 = WETH;
     }
-    params = Params({token0: token0, token1: token1, isEth: isETH});
+    params = Params({token0: token0, token1: token1, WETH: WETH});
     pool = address(new Pool{salt: salt}());
     delete params;
     getPool[token0][token1] = pool;

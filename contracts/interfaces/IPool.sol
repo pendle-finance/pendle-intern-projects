@@ -25,13 +25,7 @@ interface IPool {
 
   function token1() external view returns (address);
 
-  function getReserves()
-    external
-    view
-    returns (
-      uint256 reserve0,
-      uint256 reserve1
-    );
+  function getReserves() external view returns (uint112 reserve0, uint112 reserve1);
 
   //consider to implement this function in the future
   //   function price0CumulativeLast() external view returns (uint256);
@@ -41,39 +35,39 @@ interface IPool {
   //   function kLast() external view returns (uint256);
 
   function swap(
-    uint256 amount0Out,
-    uint256 amount1Out,
+    uint112 amount0Out,
+    uint112 amount1Out,
     address to
   ) external;
 
   function addLiquidity(
-    uint256 amount0,
-    uint256 amount1,
+    uint112 amount0,
+    uint112 amount1,
     address to
   )
     external
     returns (
-      uint256 amount0In,
-      uint256 amount1In,
+      uint112 amount0In,
+      uint112 amount1In,
       uint256 liquidity
     );
 
   function removeLiquidity(
     uint256 liquidity,
-    uint256 amountAMin,
-    uint256 amountBMin,
+    uint112 amountAMin,
+    uint112 amountBMin,
     address to
-  ) external returns (uint256 amountA, uint256 amountB);
+  ) external returns (uint112 amountA, uint112 amountB);
 
   function swapExactIn(
     address token,
-    uint256 amountIn,
+    uint112 amountIn,
     address to
   ) external;
 
   function swapExactOut(
     address token,
-    uint256 amountOut,
+    uint112 amountOut,
     address to
   ) external;
 

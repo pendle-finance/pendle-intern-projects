@@ -17,10 +17,10 @@ library AMMLibrary {
 
   // given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
   function quote(
-    uint256 amountA,
-    uint256 reserveA,
-    uint256 reserveB
-  ) internal pure returns (uint256 amountB) {
+    uint112 amountA,
+    uint112 reserveA,
+    uint112 reserveB
+  ) internal pure returns (uint112 amountB) {
     require(amountA > 0, "AMMLibrary: INSUFFICIENT_AMOUNT");
     require(reserveA > 0 && reserveB > 0, "AMMLibrary: INSUFFICIENT_LIQUIDITY");
     amountB = (amountA * reserveB) / reserveA;
@@ -29,30 +29,30 @@ library AMMLibrary {
   // given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
   // fee represented where 1% = 10
   function getAmountOut(
-    uint256 amountIn,
-    uint256 reserveIn,
-    uint256 reserveOut,
-    uint256 fee
-  ) internal pure returns (uint256 amountOut) {
+    uint112 amountIn,
+    uint112 reserveIn,
+    uint112 reserveOut,
+    uint112 fee
+  ) internal pure returns (uint112 amountOut) {
     require(amountIn > 0, "AMMLibrary: INSUFFICIENT_INPUT_AMOUNT");
     require(reserveIn > 0 && reserveOut > 0, "AMMLibrary: INSUFFICIENT_LIQUIDITY");
-    uint256 amountInWithFee = amountIn * (1000 - fee);
-    uint256 numerator = amountInWithFee * (reserveOut);
-    uint256 denominator = reserveIn * (1000) + (amountInWithFee);
+    uint112 amountInWithFee = amountIn * (1000 - fee);
+    uint112 numerator = amountInWithFee * (reserveOut);
+    uint112 denominator = reserveIn * (1000) + (amountInWithFee);
     amountOut = numerator / denominator;
   }
 
   // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
   function getAmountIn(
-    uint256 amountOut,
-    uint256 reserveIn,
-    uint256 reserveOut,
-    uint256 fee
-  ) internal pure returns (uint256 amountIn) {
-    require(amountOut > 0, "AMMLibrary: INSUFFICIENT_OUTPUT_AMOUNT");
+    uint112 amountOut,
+    uint112 reserveIn,
+    uint112 reserveOut,
+    uint112 fee
+  ) internal pure returns (uint112 amountIn) {
     require(reserveIn > 0 && reserveOut > 0, "AMMLibrary: INSUFFICIENT_LIQUIDITY");
-    uint256 numerator = reserveIn * amountOut * 1000;
-    uint256 denominator = (reserveOut - amountOut) * (1000 - fee);
+    require(amountOut > 0, "AMMLibrary: INSUFFICIENT_OUTPUT_AMOUNT");
+    uint112 numerator = reserveIn * amountOut * 1000;
+    uint112 denominator = (reserveOut - amountOut) * (1000 - fee);
     amountIn = (numerator / denominator) + (1);
   }
 }
