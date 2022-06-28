@@ -68,42 +68,51 @@ contract Pool is IPool, PoolERC20 {
     _reserve1 = reserve1;
   }
 
-  function _mintLiquidity(
-    address to,
+  function _calcAddLiquidity(
     uint112 amount0,
-    uint112 amount1
-  ) private nonZeroAddress(to) returns (uint256 liquidity) {
+    uint112 amount1,
+    address to
+  )
+    private
+    returns (
+      uint112,
+      uint112,
+      uint256
+    )
+  {
+    //calculate the optimal amounts to be added
+    require(amount0 > 0, "POOL: INVALID AMOUNT0");
+    require(amount1 > 0, "POOL: INVALID AMOUNT1");
+    (uint112 _reserve0, uint112 _reserve1) = getReserves();
+    uint112 optimalAmount0;
+    uint112 optimalAmount1;
+    optimalAmount0 = amount0;
+    optimalAmount1 = amount1;
+    if (_reserve0 > 0 && _reserve1 > 0) {
+      uint112 tmp = uint112(AMMLibrary.quote(amount0, _reserve0, _reserve1));
+      if (tmp <= amount1) {
+        optimalAmount1 = tmp;
+      } else {
+        optimalAmount0 = uint112(AMMLibrary.quote(amount1, _reserve1, _reserve0));
+      }
+    }
+
+    //calculate the liquidity to be minted and mint liquidity
+    uint256 liquidity;
     uint256 totalSupply = _totalSupply;
-    (uint256 _reserve0, uint256 _reserve1) = getReserves();
     if (_totalSupply == MINIMUM_LIQUIDITY) {
-      liquidity = Math.sqrt(amount0 * amount1);
+      liquidity = Math.sqrt(optimalAmount0 * optimalAmount1);
     } else {
       liquidity = Math.min(
-        (amount0 * totalSupply) / _reserve0,
-        (amount1 * totalSupply) / _reserve1
+        (optimalAmount0 * totalSupply) / _reserve0,
+        (optimalAmount1 * totalSupply) / _reserve1
       );
     }
     require(liquidity > 0, "Invalid liquidity");
     _mint(to, liquidity, false);
-    _update(amount0, amount1, 0, 0);
-    emit Mint(msg.sender, amount0, amount1);
-    return liquidity;
-  }
-
-  function _addLiquidity(uint112 amount0, uint112 amount1) public view returns (uint112, uint112) {
-    require(amount0 > 0, "POOL: INVALID AMOUNT0");
-    require(amount1 > 0, "POOL: INVALID AMOUNT1");
-    (uint112 _reserve0, uint112 _reserve1) = getReserves();
-    if (_reserve0 == 0 && _reserve1 == 0) {
-      return (amount0, amount1);
-    }
-    uint112 optimalAmount1 = uint112(AMMLibrary.quote(amount0, _reserve0, _reserve1));
-    if (optimalAmount1 <= amount1) {
-      return (amount0, optimalAmount1);
-    } else {
-      uint112 optimalAmount0 = uint112(AMMLibrary.quote(amount1, _reserve1, _reserve0));
-      return (optimalAmount0, amount1);
-    }
+    _update(optimalAmount0, optimalAmount1, 0, 0);
+    emit Mint(msg.sender, optimalAmount0, optimalAmount1);
+    return (optimalAmount0, optimalAmount1, liquidity);
   }
 
   function addLiquidity(
@@ -121,10 +130,10 @@ contract Pool is IPool, PoolERC20 {
       uint256 liquidity
     )
   {
-    (amount0In, amount1In) = _addLiquidity(amount0, amount1);
+    (amount0In, amount1In, liquidity) = _calcAddLiquidity(amount0, amount1, to);
     TransferHelper.safeTransferFrom(token0, msg.sender, address(this), amount0In);
     TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount1In);
-    liquidity = _mintLiquidity(to, amount0In, amount1In);
+    // liquidity = _mintLiquidity(to, amount0In, amount1In);
   }
 
   function addLiquidityEth(uint112 amount, address to)
@@ -139,13 +148,13 @@ contract Pool is IPool, PoolERC20 {
       uint256 liquidity
     )
   {
-    (amountEth, amountToken) = _addLiquidity(uint112(msg.value), amount);
+    (amountEth, amountToken, liquidity) = _calcAddLiquidity(uint112(msg.value), amount, to);
     if (amountEth < msg.value) {
       payable(msg.sender).transfer(msg.value - amountEth);
     }
     IWETH(token0).deposit{value: amountEth}();
     TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amountToken);
-    liquidity = _mintLiquidity(to, amountEth, amountToken);
+    // liquidity = _mintLiquidity(to, amountEth, amountToken);
   }
 
   function _removeLiquidity(
@@ -154,7 +163,7 @@ contract Pool is IPool, PoolERC20 {
     uint112 amount1Min
   ) internal returns (uint112 amount0, uint112 amount1) {
     require(liquidity > 0, "POOL: INVALID LIQUIDITY");
-    require(liquidity < _balances[msg.sender], "POOL: INVALID LIQUIDITY");
+    require(liquidity <= _balances[msg.sender], "POOL: INVALID LIQUIDITY");
     uint112 totalSupply = uint112(_totalSupply);
     uint112 balance0 = uint112(IERC20(token0).balanceOf(address(this)));
     uint112 balance1 = uint112(IERC20(token1).balanceOf(address(this)));
@@ -208,21 +217,21 @@ contract Pool is IPool, PoolERC20 {
     emit Burn(msg.sender, amountEth, amountToken, to);
   }
 
-  function removeLiquidityEthWithPermit(
-    uint256 liquidity,
-    uint112 amountEthMin,
-    uint112 amountTokenMin,
-    address to,
-    uint256 deadline,
-    bool approveMax,
-    uint8 v,
-    bytes32 r,
-    bytes32 s
-  ) external returns (uint112 amount0, uint112 amount1) {
-    uint256 value = approveMax ? (type(uint256).max) : liquidity;
-    permit(msg.sender, address(this), value, deadline, v, r, s);
-    (amount0, amount1) = removeLiquidityEth(liquidity, amountEthMin, amountTokenMin, to);
-  }
+  // function removeLiquidityEthWithPermit(
+  //   uint256 liquidity,
+  //   uint112 amountEthMin,
+  //   uint112 amountTokenMin,
+  //   address to,
+  //   uint256 deadline,
+  //   bool approveMax,
+  //   uint8 v,
+  //   bytes32 r,
+  //   bytes32 s
+  // ) external returns (uint112 amount0, uint112 amount1) {
+  //   uint256 value = approveMax ? (type(uint256).max) : liquidity;
+  //   permit(msg.sender, address(this), value, deadline, v, r, s);
+  //   (amount0, amount1) = removeLiquidityEth(liquidity, amountEthMin, amountTokenMin, to);
+  // }
 
   ///@dev Your flash swap, might as well make all swaps use a flash swap since we're at it
   function swap(

@@ -25,9 +25,9 @@ contract TestLibrary {
     uint112 amountIn,
     uint112 reserveIn,
     uint112 reserveOut,
-    uint112 fee
+    uint256 fee
   ) public pure returns (uint112 amountOut) {
-    amountOut = AMMLibrary.getAmountOut(amountIn, reserveIn, reserveOut, fee);
+    amountOut = AMMLibrary.getAmountOut(amountIn, reserveIn, reserveOut, uint112(fee));
   }
 
   function getAmountIn(
