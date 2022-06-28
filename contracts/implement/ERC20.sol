@@ -4,14 +4,16 @@ pragma solidity ^0.8.11;
 import "../interface/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
+// Overral you guys should use OpenZeppelin's ERC20 instead
 contract ERC20 is IERC20Metadata {
-  using SafeMath for uint256;
+  using SafeMath for uint256; // From Solidity 0.8.0 onwards it has built-in overflow protection, hence SafeMath is not necessary
 
   uint256 internal totalBalance;
   //address public owner;
   mapping(address => uint256) internal balances;
   mapping(address => mapping(address => uint256)) private allowBalances;
-  string public constant tokenName = "LP AMM";
+  string public constant tokenName = "LP AMM"; // It's much better to name this name, symbol & decimal so that you don't have
+  // to write 3 public functions to fulfil the IERC20Metadata. Same for totalSupply
   string public constant tokenSymbol = "LP";
   uint8 public constant tokenDecimal = 18;
 

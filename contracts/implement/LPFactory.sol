@@ -18,8 +18,10 @@ contract LPFactory is ILPFactory {
     require(token0 != address(0), "Zero address");
     require(getPair[token0][token1] == address(0), "Pair already exist"); // single check is sufficient
     // Create new pair
-    ILPPair newPair = ILPPair(address(this));
-    newPair.initialize(tokenA, tokenB);
+    ILPPair newPair = ILPPair(address(this)); // how can this work actually?
+    newPair.initialize(tokenA, tokenB); // What's the reason for using initialize instead of passing
+    // the argument directly into the constructor?
+
     pair = address(newPair);
 
     getPair[token0][token1] = pair;
