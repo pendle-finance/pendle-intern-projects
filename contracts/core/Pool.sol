@@ -274,7 +274,7 @@ contract Pool is IPool, PoolERC20 {
     (uint256 reserveIn, uint256 reserveOut, address tokenIn, address tokenOut) = _findWhichToken(
       token
     );
-    uint256 amountOut = uint256(AMMLibrary.getAmountOut(amountIn, reserveIn, reserveOut, 0));
+    uint256 amountOut = AMMLibrary.getAmountOut(amountIn, reserveIn, reserveOut, 0);
     TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), amountIn);
     if (tokenOut == token0) swap(amountOut, 0, to);
     else swap(0, amountOut, to);
@@ -283,7 +283,7 @@ contract Pool is IPool, PoolERC20 {
   //Assumption: token0 is ETH, so when you transfer to the user, always transfer token1
   function swapExactInEthForToken(address to) external payable onlyEthPool nonZeroAddress(to) {
     (uint256 _reserve0, uint256 _reserve1) = getReserves();
-    uint256 amountOut = uint256(AMMLibrary.getAmountOut(msg.value, _reserve0, _reserve1, 0));
+    uint256 amountOut = AMMLibrary.getAmountOut(msg.value, _reserve0, _reserve1, 0);
     require(amountOut < _reserve1, "POOL: INSUFFICIENT LIQUIDITY");
     IWETH(token0).deposit{value: msg.value}();
     swap(0, amountOut, to);
@@ -296,7 +296,7 @@ contract Pool is IPool, PoolERC20 {
     nonZeroAddress(to)
   {
     (uint256 _reserve0, uint256 _reserve1) = getReserves();
-    uint256 amountOut = uint256(AMMLibrary.getAmountOut(amount, _reserve1, _reserve0, 0));
+    uint256 amountOut = AMMLibrary.getAmountOut(amount, _reserve1, _reserve0, 0);
     require(amountOut < _reserve0, "POOL: INSUFFICIENT LIQUIDITY");
     _takeTokenTransferEth(to, amount, amountOut);
   }
@@ -342,7 +342,7 @@ contract Pool is IPool, PoolERC20 {
   {
     (uint256 _reserve0, uint256 _reserve1) = getReserves();
     require(amount < _reserve0, "POOL: INSUFFICIENT LIQUIDITY");
-    uint256 amountIn = uint256(AMMLibrary.getAmountIn(amount, _reserve1, _reserve0, 0));
+    uint256 amountIn = AMMLibrary.getAmountIn(amount, _reserve1, _reserve0, 0);
     _takeTokenTransferEth(to, amountIn, amount);
   }
 
