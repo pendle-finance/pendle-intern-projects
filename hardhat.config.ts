@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv';
 
-import { HardhatUserConfig } from 'hardhat/config';
+import {HardhatUserConfig} from 'hardhat/config';
 import '@nomiclabs/hardhat-etherscan';
 import '@typechain/hardhat';
 import '@nomiclabs/hardhat-ethers';
@@ -19,22 +19,22 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: '0.8.11',
+        version: '0.8.0',
         settings: {
           optimizer: {
             enabled: true,
             runs: 3000,
           },
-        }
-      }
-    ]
+        },
+      },
+    ],
   },
   networks: {
     hardhat: {
       chainId: 1313161554,
       forking: {
         // url: `https://testnet.aurora.dev/${process.env.AURORA_API_KEY}`,
-        url: `https://mainnet.aurora.dev/`,
+        url: `https://api.avax.network/ext/bc/C/rpc`,
         // blockNumber: 65217137
       },
       accounts: [
@@ -75,8 +75,8 @@ const config: HardhatUserConfig = {
       chainId: 1313161554,
       url: `https://mainnet.aurora.dev/${process.env.AURORA_API_KEY}`,
       accounts: [`${process.env.PRIVATE_KEYS || dummyPrivateKey}`],
-      timeout: 500000
-    }
+      timeout: 500000,
+    },
   },
   typechain: {
     target: 'ethers-v5',
