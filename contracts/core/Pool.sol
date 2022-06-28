@@ -41,6 +41,7 @@ contract Pool is IPool, PoolERC20 {
   }
 
   modifier onlyEthPool() {
+    // we can just check if token0 is WETH or token1 is WETH right?
     require(isETH, "Pool: Not a ETH pool");
     _;
   }
@@ -48,11 +49,13 @@ contract Pool is IPool, PoolERC20 {
   constructor() {
     factory = msg.sender;
     (token0, token1, isETH) = IFactory(factory).getParams();
+    // Hmmm
     _mint(address(0), MINIMUM_LIQUIDITY, true);
   }
 
   receive() external payable {}
 
+  // This is an interesting twist of the update function
   function _update(
     uint256 amount0In,
     uint256 amount1In,
@@ -63,11 +66,24 @@ contract Pool is IPool, PoolERC20 {
     reserve1 = reserve1 + amount1In - amount1Out;
   }
 
+  // the namings of the functions are not very good, mint is a private func but doesn't have leading underscore
+  // while _addLiquidity is public & has leading underscore
+
+  // Also, the code should allowed the reader to read from top to bottom. For example, addLiquidity should on the top most
+  // , then _addLiquidity & then mint
+
+  // Or there is another convention of all the external functions first, then public, then internal, then private,
+  // which is quite good as well
+
   function getReserves() public view override returns (uint256 _reserve0, uint256 _reserve1) {
     _reserve0 = reserve0;
     _reserve1 = reserve1;
   }
 
+  // This function is kinda strange. You guys have already had an addLiquidity function that calculate the
+  // exact amount each token will be added, so why take the min here?
+  // Also, there is a fragmentation of logic where the amount is calculated in the addLiquidity function,
+  // yet the amount of LP minted is in this function
   function mint(
     address to,
     uint256 amount0,
@@ -90,6 +106,8 @@ contract Pool is IPool, PoolERC20 {
     return liquidity;
   }
 
+  // normally people only do underscore leading function for internal function or function callable by gov only
+  // in this case, a much better name would be calcAddLiquidity
   function _addLiquidity(uint256 amount0, uint256 amount1) public view returns (uint256, uint256) {
     require(amount0 > 0, "POOL: INVALID AMOUNT0");
     require(amount1 > 0, "POOL: INVALID AMOUNT1");
@@ -141,7 +159,7 @@ contract Pool is IPool, PoolERC20 {
   {
     (amountEth, amountToken) = _addLiquidity(msg.value, amount);
     if (amountEth < msg.value) {
-      payable(msg.sender).transfer(msg.value - amountEth);
+      payable(msg.sender).transfer(msg.value - amountEth); // nice one
     }
     IWETH(token0).deposit{value: amountEth}();
     TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amountToken);
@@ -154,7 +172,9 @@ contract Pool is IPool, PoolERC20 {
     uint256 amount1Min
   ) internal returns (uint256 amount0, uint256 amount1) {
     require(liquidity > 0, "POOL: INVALID LIQUIDITY");
+    // <= actually
     require(liquidity < _balances[msg.sender], "POOL: INVALID LIQUIDITY");
+
     uint256 totalSupply = uint256(_totalSupply);
     uint256 balance0 = uint256(IERC20(token0).balanceOf(address(this)));
     uint256 balance1 = uint256(IERC20(token1).balanceOf(address(this)));
@@ -171,6 +191,10 @@ contract Pool is IPool, PoolERC20 {
     uint256 amount1Min,
     address to
   ) public override nonZeroAddress(to) returns (uint256 amount0, uint256 amount1) {
+    // I do prefer having all the transfers in the same location for easier audit
+    // Normally the calculation logic & the transfer + verification logic should be separated
+    // so that each function only has 1 task
+
     (amount0, amount1) = _removeLiquidity(liquidity, amount0Min, amount1Min);
     TransferHelper.safeTransfer(token0, to, amount0);
     TransferHelper.safeTransfer(token1, to, amount1);
@@ -178,6 +202,8 @@ contract Pool is IPool, PoolERC20 {
     emit Burn(msg.sender, amount0, amount1, to);
   }
 
+  // Hmm do you need the withPermit for removing liquidity? since you burn the liquidity directly and hence
+  // doesn't touch the allowance
   function removeLiquidityWithPermit(
     uint256 liquidity,
     uint256 amount0Min,
@@ -230,6 +256,11 @@ contract Pool is IPool, PoolERC20 {
     uint256 amount1Out,
     address to
   ) public override lock nonZeroAddress(to) {
+    // Hmmm why is this function public actually?
+    // Also, this piece of logic is strange since now the calculation logic is in the contract already
+    // => From the amountIn, you can directly calculate the amount out, instead of the current logic
+    // where you calculate the amountOut and then call this function to once again verify the K
+
     require(amount0Out > 0 || amount1Out > 0, "Pool: INSUFFICIENT_OUTPUT_AMOUNT");
     (uint256 _reserve0, uint256 _reserve1) = getReserves(); // gas savings
     require(amount0Out < _reserve0 && amount1Out < _reserve1, "Pool: INSUFFICIENT_LIQUIDITY");
@@ -274,6 +305,7 @@ contract Pool is IPool, PoolERC20 {
     (uint256 reserveIn, uint256 reserveOut, address tokenIn, address tokenOut) = _findWhichToken(
       token
     );
+    // no need for the uint256 cast here
     uint256 amountOut = uint256(AMMLibrary.getAmountOut(amountIn, reserveIn, reserveOut, 0));
     TransferHelper.safeTransferFrom(tokenIn, msg.sender, address(this), amountIn);
     if (tokenOut == token0) swap(amountOut, 0, to);
@@ -282,6 +314,7 @@ contract Pool is IPool, PoolERC20 {
 
   //Assumption: token0 is ETH, so when you transfer to the user, always transfer token1
   function swapExactInEthForToken(address to) external payable onlyEthPool nonZeroAddress(to) {
+    // don't assume but should add a requirement checking token0 is ETH in the constructor
     (uint256 _reserve0, uint256 _reserve1) = getReserves();
     uint256 amountOut = uint256(AMMLibrary.getAmountOut(msg.value, _reserve0, _reserve1, 0));
     require(amountOut < _reserve1, "POOL: INSUFFICIENT LIQUIDITY");

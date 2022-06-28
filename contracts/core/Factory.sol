@@ -5,6 +5,7 @@ import "../libraries/AMMLibrary.sol";
 import "./Pool.sol";
 
 contract Factory is IFactory {
+  // It's not the best idea to encode WETH since the contract can be deployed on a number of different chains
   address public immutable WETH = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
   struct Params {
     address token0;
@@ -51,7 +52,12 @@ contract Factory is IFactory {
       token1 = token0;
       token0 = WETH;
     }
+
+    // what's the reason for not providing all these parameters in the constructor?
+    // But at the same time, the pattern of assigning a global var, read then delete is interesting
+    // It's the first time I see this pattern
     params = Params({token0: token0, token1: token1, isEth: isETH});
+
     pool = address(new Pool{salt: salt}());
     delete params;
     getPool[token0][token1] = pool;
