@@ -3,6 +3,9 @@ pragma solidity ^0.8.0;
 
 import "./PairHelper.sol";
 
+// I find the idea of PairHelper & PairHelperClient to be pretty interesting
+// Yet, the normal user won't be able to use it because this pairHelper must contains the tokens on its own
+// to be able to interact with each Pair, yet the tokens are in users' wallet
 contract PairHelperClient {
   using PairHelper for Pair;
   Pair private pair;

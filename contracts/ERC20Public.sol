@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import "./ERC20.sol";
 
+// These "Public" contracts are actually called mock contracts, and should be stored in a folder named "mock"
+// so that we don't deploy / audit it
 contract ERC20Public is ERC20 {
   constructor(string memory _name, string memory _symbol) ERC20(_name, _symbol) {}
 
