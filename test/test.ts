@@ -1,127 +1,46 @@
 import { expect } from "chai";
-import { BigNumber, utils, Wallet } from "ethers";
+import { utils } from "ethers";
 import { ethers, waffle } from "hardhat";
-import { deploy, evm_revert, evm_snapshot } from "./helpers/hardhat-helpers";
-import { ERC20, TestContract, Airdrop } from "../typechain";
-
-// describe("TestContract", () => {
-//   const [admin,Alice,Bob] = waffle.provider.getWallets();
-//   let globalSnapshotId;
-//   let snapshotId;
-//   let newERC20: ERC20;
-//   let totalBalance = BigNumber.from(2).pow(255)
-//   before(async () => {
-//     globalSnapshotId = await evm_snapshot();
-
-//     newERC20 = await deploy<ERC20>("ERC20", [totalBalance,"Shiro","SRO","18"]);
-
-//     snapshotId = await evm_snapshot();
-//   });
-
-//   async function revertSnapshot() {
-//     await evm_revert(snapshotId);
-//     snapshotId = await evm_snapshot();
-//   }
-
-//   beforeEach(async () => {
-//     await revertSnapshot();
-//   });
-//   //   0x6824c889f6EbBA8Dac4Dd4289746FCFaC772Ea56
-//   //   0xCFf94465bd20C91C86b0c41e385052e61ed49f37
-//   //   0xEBAf3e0b7dBB0Eb41d66875Dd64d9F0F314651B3
-//   //   0xbFe6D5155040803CeB12a73F8f3763C26dd64a92
-//   // it("increases total successfully", async () => {
-//   //   await testContract.increaseTotal(100);
-
-//   //   let curTotal = await testContract.getTotal();
-//   //   expect(curTotal).to.be.eq(200);
-//   // });
-//   it("test get total supply",async () => {
-//     let total = await newERC20.totalSupply();
-//     expect(total).to.be.eq(totalBalance);
-//   })
-  
-//   it("test get balances of admin",async () => {
-//     let total = await newERC20.balanceOf(admin.address);
-//     expect(total).to.be.eq(totalBalance);
-//     // let owner = await newERC20.owner();
-//     // console.log(owner);
-//   })
-
-//   it("test get balances of user",async () => {
-//     let total = await newERC20.connect(Alice).balanceOf(Alice.address);
-//     expect(total).to.be.eq(0);
-//   })
-
-//   it("test transfer",async () => {
-//     await newERC20.connect(admin).transfer(Alice.address,1000);
-//     let total2 = await newERC20.connect(admin).balanceOf(Alice.address);
-//     expect(total2).to.be.eq(1000);
-//   })
-  
-//   it("test allowance",async () => {
-//     let allow_ori  = await newERC20.allowance(admin.address,Alice.address);
-//     expect(allow_ori).to.be.eq(0);
-//     await newERC20.approve(Alice.address,2000);
-//     let allow_after  = await newERC20.allowance(admin.address,Alice.address);
-//     expect(allow_after).to.be.eq(2000);
-//   })
-
-//   it("test transferFrom",async () => {
-//     let allow_ori  = await newERC20.allowance(admin.address,Alice.address);
-//     expect(allow_ori).to.be.eq(0);
-//     await newERC20.approve(Alice.address,2000);
-//     let allow_after  = await newERC20.allowance(admin.address,Alice.address);
-//     expect(allow_after).to.be.eq(2000);
-//     await newERC20.connect(Alice).transferFrom(admin.address,Alice.address,1000);
-//     let ad1Balance = await newERC20.balanceOf(Alice.address);
-//     expect(ad1Balance).to.be.eq(1000);
-//     //console.log(admin.address,Alice.address);
-//   })
-
-//   it("test revert transfer amount",async() =>{
-//     await expect(newERC20.transfer(Alice.address, totalBalance.add(1))).to.be.revertedWith("Insufficient amount");
-//   })
-
-//   it("test insufficient allowance",async() =>{
-//     let allow_ori  = await newERC20.allowance(admin.address,Alice.address);
-//     expect(allow_ori).to.be.eq(0);
-//     await newERC20.approve(Alice.address,2000);
-//     let allow_after  = await newERC20.allowance(admin.address,Alice.address);
-//     expect(allow_after).to.be.eq(2000);
-//     //await newERC20.connect(Alice).transferFrom(admin.address,Alice.address,3000);
-//     await expect(newERC20.connect(Alice).transferFrom(admin.address,Alice.address, 3000)).to.be.revertedWith("Insufficient allowance");
-//   })
-//   // it("decreases total successfully", async () => {
-//   //   await testContract.decreaseTotal(50);
-
-//   //   let curTotal = await testContract.getTotal();
-//   //   expect(curTotal).to.be.eq(50);
-//   // });
-//   it("test revert",async () => {
-//     let INF = BigNumber.from(2).pow(255);
-//     let smallerAmount = 1000;
-//     await expect(newERC20.transfer(Alice.address, smallerAmount)).to.emit(newERC20, 'Transfer').withArgs(admin.address, Alice.address, smallerAmount);
-//     await expect(newERC20.transfer(Alice.address, totalBalance.add(1))).to.be.revertedWith("Insufficient amount");
-//   })
-// });
-
-describe("Test Airdrop",()=>{
-  const [admin,Alice,Bob] = waffle.provider.getWallets();
+import { deploy, evm_revert, evm_snapshot, toWei } from "./helpers/hardhat-helpers";
+import { ERC20, PERC20, Router, LPFactory, LPPair, ILPPair } from "../typechain";
+import { Address } from "cluster";
+describe("Router", () => {
+  const [admin, Alice, Bob, Dd] = waffle.provider.getWallets();
   let globalSnapshotId;
   let snapshotId;
-  let firstnewERC20: ERC20;
-  let secondnewERC20: ERC20;
-  let newAirdrop: Airdrop;
-  let totalBalance = BigNumber.from(2).pow(255)
+  let coin1, coin2, coin3: PERC20;
+  let pair1, pair2: LPPair
+  let factory: LPFactory;
+  let router: Router;
+
   before(async () => {
     globalSnapshotId = await evm_snapshot();
 
-    firstnewERC20 = await deploy<ERC20>("ERC20", [totalBalance,"Shiro","SRO","18"]);
+    coin1 = await deploy<PERC20>("PERC20", [100, "peepeepoopoo", "PPPOPO", 1]);
+    coin2 = await deploy<PERC20>("PERC20", [100, "poopoopeepee", "POPOPP", 1]);
+    coin3 = await deploy<PERC20>("PERC20", [100, "peepoopeepoo", "PPOPPO", 1]);
 
-    secondnewERC20 = await deploy<ERC20>("ERC20", [totalBalance,"Kuro","KRO","18"]);
+    await coin1.mint(Alice.address, 1000000);
+    await coin2.mint(Alice.address, 1000000);
+    await coin3.mint(Alice.address, 1000000);
 
-    newAirdrop = await deploy<Airdrop>("Airdrop",[]);
+    await coin1.mint(Bob.address, 1000000);
+    await coin2.mint(Bob.address, 1000000);
+    await coin3.mint(Bob.address, 1000000);
+
+    factory = await deploy<LPFactory>("LPFactory", []);
+    router = await deploy<Router>("Router", [factory.address]);
+    await factory.deployed();
+
+    await factory.createPair(coin1.address, coin2.address);
+    await factory.createPair(coin2.address, coin3.address);
+
+    let pair1Address = await factory.getPair(coin1.address, coin2.address);
+    let pair2Address = await factory.getPair(coin2.address, coin3.address);
+
+    pair1 = await ethers.getContractAt("LPPair", pair1Address);
+    pair2 = await ethers.getContractAt("LPPair", pair2Address);
+
     snapshotId = await evm_snapshot();
   });
 
@@ -132,86 +51,264 @@ describe("Test Airdrop",()=>{
 
   beforeEach(async () => {
     await revertSnapshot();
-    //Set up balance
-    await firstnewERC20.transfer(newAirdrop.address,100000);
-    await secondnewERC20.transfer(newAirdrop.address,100000);
-    await admin.sendTransaction({
-      to: newAirdrop.address,
-      value: BigNumber.from(10).pow(22),
+  });
+  describe('test factory', () => { 
+    it("trigger identical address",async () => {
+        await expect(factory.createPair(coin1.address,coin1.address)).to.be.revertedWith('Identical token');
     })
+    it("Trigger already create pair",async () => {
+        await expect(factory.createPair(coin1.address,coin2.address)).to.be.revertedWith("Pair already exist");
+    })
+    it('Test length function',async () => {
+        await factory.createPair(coin1.address,coin3.address);
+        let len = await factory.allPairsLength();
+        expect(len).to.be.equal(3);
+    })
+  })
+  describe("tets pair scpecial case", async () => {
+    it("test add liquidity",async () => {
+      await coin1.connect(Alice).approve(pair1.address, 1000);
+      await coin2.connect(Alice).approve(pair1.address, 10);
+      await pair1.connect(Alice).addLiquidity(1000,10);
+      expect(await coin2.balanceOf(Alice.address)).to.be.equal(1000000-10);
+      expect(await coin1.balanceOf(Alice.address)).to.be.equal(1000000-1000);
+
+      // add token with different ratio
+      await coin1.connect(Bob).approve(pair1.address, 2000);
+      await coin2.connect(Bob).approve(pair1.address, 10);
+      await pair1.connect(Bob).addLiquidity(2000,10);
+      expect(await coin2.balanceOf(Bob.address)).to.be.equal(1000000-10);
+      expect(await coin1.balanceOf(Bob.address)).to.be.equal(1000000-1000);
+    })  
+    //direct contact with pair
+    it("add liquidity",async () => {
+      await coin1.connect(Alice).approve(pair1.address, 1000);
+      await coin2.connect(Alice).approve(pair1.address, 10);
+      await pair1.connect(Alice).addLiquidity(1000,10);
+      expect(await pair1.balanceOf(Alice.address)).to.be.equal(100);
+    });
+    it("remove liquidity",async () => {
+      await coin1.connect(Alice).approve(pair1.address, 1000);
+      await coin2.connect(Alice).approve(pair1.address, 10);
+      await pair1.connect(Alice).addLiquidity(1000,10);
+      expect(await pair1.balanceOf(Alice.address)).to.be.equal(100);
+      await pair1.connect(Alice).burn(Alice.address,100);
+      expect(await pair1.balanceOf(Alice.address)).to.be.eq(0);
+      expect(await coin1.balanceOf(Alice.address)).to.be.eq(1000000);
+      expect(await coin2.balanceOf(Alice.address)).to.be.eq(1000000);
+
+    });
+    it("swap",async() => {
+      await coin1.connect(Alice).approve(pair1.address, 1000);
+      await coin2.connect(Alice).approve(pair1.address, 10);
+      await pair1.connect(Alice).addLiquidity(1000,10);
+
+      await coin2.connect(Alice).approve(pair1.address, 10);
+      await pair1.connect(Alice).swapToken(coin2.address,10);
+      expect(await coin2.balanceOf(Alice.address)).to.be.eq(1000000-20);
+      expect(await coin1.balanceOf(Alice.address)).to.be.eq(1000000-500);
+
+    })
+  })
+  describe("add liquidity", () => { 
+
+    it("test addliquidity: standard", async () =>{
+
+      await coin1.connect(Alice).approve(router.address, 1000);
+      await coin2.connect(Alice).approve(router.address, 1000);
+
+      await router.connect(Alice).addLiquidity(coin1.address, coin2.address, 100, 100, 0, 0, Alice.address);
+
+      expect(await pair1.balanceOf(Alice.address)).to.be.eq(100);
+
+      
+    });
+
+    it("test addliquidity: multi", async () =>{
+
+      await coin1.connect(Alice).approve(router.address, 1000);
+      await coin2.connect(Alice).approve(router.address, 1000);
+
+      await router.connect(Alice).addLiquidity(coin1.address, coin2.address, 100, 100, 0, 0, Alice.address);
+
+      expect(await pair1.balanceOf(Alice.address)).to.be.eq(100);
+
+      await coin1.connect(Bob).approve(router.address, 1000);
+      await coin2.connect(Bob).approve(router.address, 1000);
+
+      await router.connect(Bob).addLiquidity(coin1.address, coin2.address, 100, 100, 0, 0, Bob.address);
+
+      expect(await pair1.balanceOf(Bob.address)).to.be.eq(100);
+
+    });
+
+    it("test addliquidity: emit", async () =>{
+
+      await coin1.connect(Alice).approve(router.address, 1000);
+      await coin2.connect(Alice).approve(router.address, 1000);
+
+      expect(await router.connect(Alice).addLiquidity(coin1.address, coin2.address, 100, 100, 0, 0, Alice.address))
+        .to.emit(pair1, 'Mint')
+        .withArgs(router.address, 100, 100);
+
+    });
+
   });
 
-  // TODO: allow success
-  it("Test Allow", async ()=>{
-    // Allow erc20 success
-    await newAirdrop.alowERC20(Bob.address,firstnewERC20.address,1000);
-    let BobFirstAllow = await newAirdrop.balanceOf(Bob.address,firstnewERC20.address);
-    expect(BobFirstAllow).to.be.equal(1000);
-    
-    // Allow eth success
-    await newAirdrop.allowETH(Bob.address,1000);
-    let BobETHAllow = await newAirdrop.balanceETH(Bob.address)
-    expect(BobETHAllow).to.be.equal(1000);
-  })
+  //currently incorrect rate. core need fixing.
+  describe("remove liquidity", () => {  
 
-  // TODO: allow claim success, not sucess
-  it("Test claim one", async ()=>{
-    //success
-    await newAirdrop.alowERC20(Bob.address,firstnewERC20.address,1000);
-    await newAirdrop.connect(Bob).claim([firstnewERC20.address],[1000],false,0);
-    let BobFirstBalance = await firstnewERC20.connect(Bob).balanceOf(Bob.address);
-    expect(BobFirstBalance).to.be.equal(1000);
-    //Fail
-    await expect(newAirdrop.connect(Bob).claim([firstnewERC20.address],[1000],false,0)).to.be.revertedWith("Insufficient balance");
-  })
+    it("test removeliquidity: standard", async () =>{
 
-  // TODO: allow claim success, not sucess
-  it("Test claim many", async ()=>{
-    //success
-    await newAirdrop.alowERC20(Bob.address,firstnewERC20.address,1000);
-    await newAirdrop.alowERC20(Bob.address,secondnewERC20.address,2000);
-    await newAirdrop.connect(Bob).claim([firstnewERC20.address,secondnewERC20.address],[1000,1000],false,0);
+      await coin1.connect(Alice).approve(router.address, 1000);
+      await coin2.connect(Alice).approve(router.address, 1000);
 
-    let BobFirstBalance = await firstnewERC20.connect(Bob).balanceOf(Bob.address);
-    expect(BobFirstBalance).to.be.equal(1000);
+      await router.connect(Alice).addLiquidity(coin1.address, coin2.address, 100, 100, 0, 0, Alice.address);
 
-    let BobSecondBalance = await secondnewERC20.connect(Bob).balanceOf(Bob.address);
-    expect(BobSecondBalance).to.be.equal(1000);
-    //Fail
-    await expect(newAirdrop.connect(Bob).claim([firstnewERC20.address,secondnewERC20.address],[1000,1000],false,0)).to.be.revertedWith("Insufficient balance");
-  })
+      expect(await pair1.balanceOf(Alice.address)).to.be.eq(100);
 
-  it("Test claim eth", async ()=>{
-    //success
-    let original = await waffle.provider.getBalance(Bob.address);
-    await newAirdrop.allowETH(Bob.address,BigNumber.from(10).pow(21));
-    await newAirdrop.connect(Bob).claim([],[],true,BigNumber.from(10).pow(21));
-    let after = await waffle.provider.getBalance(Bob.address);
-    
-    expect(Number(after)).to.be.greaterThan(
-      Number(original)
-    );
-  })
+      await pair1.connect(Alice).approve(router.address, 100);
 
-  it("Test claim mix", async ()=>{
-    //success
-    let original = await waffle.provider.getBalance(Bob.address);
-    await newAirdrop.alowERC20(Bob.address,firstnewERC20.address,1000);
-    await newAirdrop.alowERC20(Bob.address,secondnewERC20.address,2000);
-    await newAirdrop.allowETH(Bob.address,BigNumber.from(10).pow(21));
-    await newAirdrop.connect(Bob).claim([firstnewERC20.address,secondnewERC20.address],[1000,1000],true,BigNumber.from(10).pow(21));
+      expect(await router.connect(Alice).removeLiquidity(coin1.address, coin2.address,100, 99, 99, Alice.address));
 
-    let BobFirstBalance = await firstnewERC20.connect(Bob).balanceOf(Bob.address);
-    expect(BobFirstBalance).to.be.equal(1000);
+      expect(await pair1.balanceOf(Alice.address)).to.be.eq(0);
+      expect(await coin1.balanceOf(Alice.address)).to.be.eq(1000000);
+      expect(await coin2.balanceOf(Alice.address)).to.be.eq(1000000);
 
-    let BobSecondBalance = await secondnewERC20.connect(Bob).balanceOf(Bob.address);
-    expect(BobSecondBalance).to.be.equal(1000);
-    let after = await waffle.provider.getBalance(Bob.address);
+    });
 
-    expect(Number(after)).to.be.greaterThan(
-      Number(original)
-    );
-    //Fail
-    await expect(newAirdrop.connect(Bob).claim([firstnewERC20.address,secondnewERC20.address],[1000,1000],false,0)).to.be.revertedWith("Insufficient balance");
-  })
+    it("test removeliquidity: multi", async () =>{
+
+      await coin1.connect(Alice).approve(router.address, 1000);
+      await coin2.connect(Alice).approve(router.address, 1000);
+
+      await router.connect(Alice).addLiquidity(coin1.address, coin2.address, 100, 100, 0, 0, Alice.address);
+
+      expect(await pair1.balanceOf(Alice.address)).to.be.eq(100);
+
+      await coin1.connect(Bob).approve(router.address, 1000);
+      await coin2.connect(Bob).approve(router.address, 1000);
+
+      await router.connect(Bob).addLiquidity(coin1.address, coin2.address, 100, 100, 0, 0, Bob.address);
+
+      expect(await pair1.balanceOf(Bob.address)).to.be.eq(100);
+
+      await pair1.connect(Bob).approve(router.address, 100);
+      await router.connect(Bob).removeLiquidity(coin1.address, coin2.address,100, 99, 99, Bob.address);
+
+      expect(await pair1.balanceOf(Bob.address)).to.be.eq(0);
+      expect(await coin1.balanceOf(Bob.address)).to.be.eq(1000000);
+      expect(await coin2.balanceOf(Bob.address)).to.be.eq(1000000);
+
+      await pair1.connect(Alice).approve(router.address, 10000);
+      await router.connect(Alice).removeLiquidity(coin1.address, coin2.address,100, 99, 99, Alice.address);
+
+      expect(await pair1.balanceOf(Alice.address)).to.be.eq(0);
+      expect(await coin1.balanceOf(Alice.address)).to.be.eq(1000000);
+      expect(await coin2.balanceOf(Alice.address)).to.be.eq(1000000);
+
+    });
+
+    it("test removeliquidity: emit", async () =>{
+
+      await coin1.connect(Alice).approve(router.address, 1000);
+      await coin2.connect(Alice).approve(router.address, 1000);
+
+      await router.connect(Alice).addLiquidity(coin1.address, coin2.address, 100, 100, 0, 0, Alice.address);
+
+      expect(await pair1.balanceOf(Alice.address)).to.be.eq(100);
+
+      await pair1.connect(Alice).approve(router.address, 100);
+
+      expect(await router.connect(Alice).removeLiquidity(coin1.address, coin2.address,100, 99, 99, Alice.address))
+        .to.emit(pair1, 'Burn')
+        .withArgs(router.address, 100, 100, Alice.address);;
+
+      expect(await pair1.balanceOf(Alice.address)).to.be.eq(0);
+      expect(await coin1.balanceOf(Alice.address)).to.be.eq(1000000);
+      expect(await coin2.balanceOf(Alice.address)).to.be.eq(1000000);
+
+    });
+
+  });
+
+  describe("swap exact in", () => { 
+
+    it("test swapexactin: single", async () =>{
+
+      await coin1.connect(Alice).approve(router.address, 1000);
+      await coin2.connect(Alice).approve(router.address, 1000);
+      await coin3.connect(Alice).approve(router.address, 1000);
+
+      await router.connect(Alice).addLiquidity(coin1.address, coin2.address, 100, 200, 0, 0, Alice.address);
+      await router.connect(Alice).addLiquidity(coin2.address, coin3.address, 100, 200, 0, 0, Alice.address);
+
+      let coins : Array<string> = [coin1.address, coin2.address];
+      await coin1.connect(Bob).approve(router.address, 100);
+      expect(await router.connect(Bob).swapExactIn(100, 99, coins, Bob.address));
+
+      expect(await coin1.balanceOf(Bob.address)).to.be.eq(999900);
+      expect(await coin2.balanceOf(Bob.address)).to.be.eq(1000100);
+
+    });
+
+    it("test swapexactin: multi", async () =>{
+
+      await coin1.connect(Alice).approve(router.address, 1000);
+      await coin2.connect(Alice).approve(router.address, 1000);
+      await coin3.connect(Alice).approve(router.address, 1000);
+
+      await router.connect(Alice).addLiquidity(coin1.address, coin2.address, 100, 200, 0, 0, Alice.address);
+      await router.connect(Alice).addLiquidity(coin2.address, coin3.address, 100, 200, 0, 0, Alice.address);
+
+      let coins : Array<string> = [coin1.address, coin2.address, coin3.address];
+      await coin1.connect(Bob).approve(router.address, 100);
+      expect(await router.connect(Bob).swapExactIn(100, 99, coins, Bob.address));
+
+      expect(await coin1.balanceOf(Bob.address)).to.be.eq(999900);
+      expect(await coin3.balanceOf(Bob.address)).to.be.eq(1000100);
+
+    });
+
+  });
+
+  describe("swap exact out", () => { 
+
+    it("test swapexactout: single", async () =>{
+
+      await coin1.connect(Alice).approve(router.address, 1000);
+      await coin2.connect(Alice).approve(router.address, 1000);
+      await coin3.connect(Alice).approve(router.address, 1000);
+
+      await router.connect(Alice).addLiquidity(coin1.address, coin2.address, 100, 200, 0, 0, Alice.address);
+      await router.connect(Alice).addLiquidity(coin2.address, coin3.address, 100, 200, 0, 0, Alice.address);
+
+      let coins : Array<string> = [coin1.address, coin2.address];
+      await coin1.connect(Bob).approve(router.address, 1000);
+      expect(await router.connect(Bob).swapExactOut(100, 101, coins, Bob.address));
+
+      expect(await coin1.balanceOf(Bob.address)).to.be.eq(999899);
+      expect(await coin2.balanceOf(Bob.address)).to.be.eq(1000100);
+
+    });
+
+    it("test swapexactout: multi", async () =>{
+
+      await coin1.connect(Alice).approve(router.address, 1000);
+      await coin2.connect(Alice).approve(router.address, 1000);
+      await coin3.connect(Alice).approve(router.address, 1000);
+
+      await router.connect(Alice).addLiquidity(coin1.address, coin2.address, 100, 200, 0, 0, Alice.address);
+      await router.connect(Alice).addLiquidity(coin2.address, coin3.address, 100, 200, 0, 0, Alice.address);
+
+      let coins : Array<string> = [coin1.address, coin2.address, coin3.address];
+      await coin1.connect(Bob).approve(router.address, 1000);
+      expect(await router.connect(Bob).swapExactOut(100, 105, coins, Bob.address));
+
+      expect(await coin1.balanceOf(Bob.address)).to.be.eq(999897);
+      expect(await coin3.balanceOf(Bob.address)).to.be.eq(1000100);
+
+    });
+
+  });
 });

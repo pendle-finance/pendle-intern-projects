@@ -24,7 +24,7 @@ interface ILPPair {
 
     // Update contract state
     function mint(address to) external returns (uint liquidity);
-    function burn(address to) external returns (uint amount0, uint amount1);
+    function burn(address to,uint256 liquidity) external returns (uint amount0, uint amount1);
     function swap(uint amount0Out, uint amount1Out, address to) external;
     function skim(address to) external;
     function initialize(address, address) external;
