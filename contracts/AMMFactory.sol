@@ -20,6 +20,9 @@ contract AMMFactory is IAMMFactory {
     require(tokenA != tokenB, "UniswapV2: IDENTICAL_ADDRESSES");
     (IERC20 token0, IERC20 token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
 
+    // fun questions: Without the router, what's the purpose of still using create2 here?
+    // Also, what's the reason for still doing initialize instead of passing the arguments in constructor?
+
     require(getPair[token0][token1] == address(0), "UniswapV2: PAIR_EXISTS"); // single check is sufficient
     bytes memory bytecode = type(AMMPair).creationCode;
     bytes32 salt = keccak256(abi.encodePacked(token0, token1));

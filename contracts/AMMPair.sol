@@ -105,6 +105,10 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
   ) external virtual returns (uint256 amountA, uint256 amountB) {
     require(balanceOf[msg.sender] >= lpLiquidity, "Insufficient LP Tokens");
     // Send LP Liquidity back to pair contract:
+
+    // since the LP token is also this contract, we can just call the internal transfer directly to save gas (from doing external call)
+    // and bypassing the approval
+
     SafeERC20.safeTransferFrom(IERC20(address(this)), msg.sender, address(this), lpLiquidity);
     // Burn LP Tokens to receive back proportional tokenA and tokenB
     (amountA, amountB) = _burnLP(msg.sender);
@@ -189,9 +193,15 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
   function swap(
     uint256 amount0Out,
     uint256 amount1Out,
-    address to
-  ) external // bytes calldata data
-  {
+    address to // bytes calldata data
+  ) external {
+    // this swap function is the only function which doesn't do transferFrom the user, which is not very nice
+    // since the user cannot directly interact with it. I do think it's much better for this function to do transferFrom
+    //, calc the corresponding out amount, then transfer it out
+
+    // what the logic of this function is trying to do is simply to transfer the amount0Out / amount1Out as requested
+    // by the caller, receive the corresponding amountIn THEN verify the new K is greater than the old K. The logic to calc
+    // how much to transfer in / out is actually in the external library & is implemented at the router level
     require(amount0Out > 0 || amount1Out > 0, "INSUFFICIENT_OUTPUT_AMOUNT");
     (uint256 _reserve0, uint256 _reserve1) = getReserves(); // gas savings
     require(amount0Out < _reserve0 && amount1Out < _reserve1, "INSUFFICIENT_LIQUIDITY");

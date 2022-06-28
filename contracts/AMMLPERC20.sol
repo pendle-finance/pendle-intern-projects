@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.11;
 
+// If possible you guys should always use OpenZeppelin's ERC20
 contract AMMLPERC20 {
   string public constant name = "AMM LP";
   string public constant symbol = "AMM LP";
