@@ -13,10 +13,13 @@ contract Factory is IFactory {
     return allPairs.length;
   }
 
+  // Not right or wrong but normally I try to not make a mapping private & use a public function like this
+  // unless the function support some additional features
   function getPair(address tokenA, address tokenB) external view returns (address) {
     return pairMapping[tokenA][tokenB];
   }
 
+  // To save on storage cost, we can just store 1 pairMapping & always sort the tokenA & tokenB (in the getPair function)
   function createPair(address tokenA, address tokenB) external returns (address newPair) {
     require(tokenA != tokenB, "Same token");
     (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);

@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./IERC20Metadata.sol";
 
+// generally speaking you guys should use OpenZeppelin's ERC20
 contract ERC20 is IERC20Metadata {
   string public name;
   string public symbol;
@@ -14,8 +15,9 @@ contract ERC20 is IERC20Metadata {
   event Mint(address to, uint256 amount);
   event Burn(address from, uint256 amount);
 
+  // I would prefer the name to be nonZeroAddress
   modifier validAddress(address myAddress) {
-    require(myAddress != address(0), "Invalid address");
+    require(myAddress != address(0), "Invalid address"); // same here
     _;
   }
 
@@ -60,12 +62,14 @@ contract ERC20 is IERC20Metadata {
     return true;
   }
 
+  // Normally internal functions should have a _ prefix, like _mint
   function mint(address to, uint256 amount) internal {
     ownership[to] += amount;
     totalSupply += amount;
     emit Mint(to, amount);
   }
 
+  // By convention for mint & burn, a transfer event should still be emitted
   function burn(address from, uint256 amount) internal validAddress(from) {
     require(ownership[from] >= amount, "Insufficient balance");
     ownership[from] -= amount;

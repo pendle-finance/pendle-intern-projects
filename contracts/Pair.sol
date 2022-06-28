@@ -14,6 +14,7 @@ import "./Math.sol";
 contract Pair is IPair, ERC20 {
   uint256 public constant MINIMUM_LIQUIDITY = 1000;
 
+  // good that you guys make these variables immutable!
   address public immutable factory;
   address public immutable token0;
   address public immutable token1;
@@ -21,6 +22,7 @@ contract Pair is IPair, ERC20 {
   /// All these variable should be in the same storage space, similar to UniswapV2
   uint112 public reserve0;
   uint112 public reserve1;
+  // actually we don't need blockTimestampLast because we are not implementing the accumulated price
   uint32 public blockTimestampLast;
 
   constructor(
@@ -48,6 +50,7 @@ contract Pair is IPair, ERC20 {
     blockTimestampLast_ = blockTimestampLast;
   }
 
+  // what's the purpose of kLast here? In UniV2 the kLast is actually to help with fee minting
   function kLast() public view returns (uint256) {
     (uint256 balance0, uint256 balance1, ) = getReserves();
     return balance0 * balance1;
@@ -80,6 +83,9 @@ contract Pair is IPair, ERC20 {
     emit ProvideLiquidity(user, amount0In, amount1In);
   }
 
+  // this is not really how it works btw. When you remove X LP (the pool has TOTAL LP)
+  // you will receive X/TOTAL * reserve0 token0, and X/TOTAL * reserve1 token1
+  // => Most of the times people will remove liquidity by providing the amount of LP they want to burn
   function removeLiquidity(uint256 amount0Out, uint256 amount1Out) public {
     address user = msg.sender;
     (uint256 balance0, uint256 balance1, ) = getReserves();
@@ -100,6 +106,9 @@ contract Pair is IPair, ERC20 {
   }
 
   /// Requires user to approve transfer beforehand
+  // Hmm how can the user uses this function actually? They will have to pre-compute exactly how much they are getting
+  //, which is not doable. Hence, the way to do it is to just provide the amountIn & the tokenIn, and the contract should
+  // calc the amount out & transfer it out
   function swap(
     uint256 amount0In,
     uint256 amount1In,
