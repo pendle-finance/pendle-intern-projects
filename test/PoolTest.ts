@@ -99,10 +99,10 @@ describe('Pool Tests for swaps', () => {
     });
 
     it('isETH', async () => {
-      let isETH = await pool.isETH();
-      expect(isETH).to.be.false;
-      isETH = await ethPool.isETH();
-      expect(isETH).to.be.true;
+      let token0Addr = await pool.token0();
+      expect(token0Addr).to.be.not.eq(weth.address);
+      token0Addr = await ethPool.token0();
+      expect(token0Addr).to.be.eq(weth.address);
     });
 
     // it('Pool address is deterministic and correct', async () => {
@@ -323,9 +323,11 @@ describe('Pool Tests for swaps', () => {
       await pool.connect(a).addLiquidity(1000, 1000, a.address);
       await pool.connect(b).addLiquidity(1000, 1000, b.address);
       await expect(pool.connect(b).swapExactInEthForToken(a.address, {value: 100})).to.be.revertedWith(
-        'Pool: Not a ETH pool'
+        'Pool: Not an ETH pool'
       );
-      await expect(pool.connect(b).swapExactOutEthForToken(100, a.address)).to.be.revertedWith('Pool: Not a ETH pool');
+      await expect(pool.connect(b).swapExactOutEthForToken(100, a.address)).to.be.revertedWith(
+        'Pool: Not an ETH pool'
+      );
     });
 
     it('zero address', async () => {
@@ -366,8 +368,10 @@ describe('Pool Tests for swaps', () => {
     it('cannot swapInEth & swapOutEth non-ethPool', async () => {
       await pool.connect(a).addLiquidity(1000, 1000, a.address);
       await pool.connect(b).addLiquidity(1000, 1000, b.address);
-      await expect(pool.connect(b).swapExactInTokenForEth(100, a.address)).to.be.revertedWith('Pool: Not a ETH pool');
-      await expect(pool.connect(b).swapExactOutTokenForEth(100, a.address)).to.be.revertedWith('Pool: Not a ETH pool');
+      await expect(pool.connect(b).swapExactInTokenForEth(100, a.address)).to.be.revertedWith('Pool: Not an ETH pool');
+      await expect(pool.connect(b).swapExactOutTokenForEth(100, a.address)).to.be.revertedWith(
+        'Pool: Not an ETH pool'
+      );
     });
 
     it('zero address', async () => {

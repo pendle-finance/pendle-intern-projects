@@ -16,6 +16,6 @@ interface IFactory {
     returns (
       address token0,
       address token1,
-      bool isEth
+      address weth
     );
 }

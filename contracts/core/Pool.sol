@@ -21,7 +21,7 @@ contract Pool is IPool, PoolERC20 {
 
   //uint8 take same space as bool
   uint8 private unlocked = 1;
-  bool public isETH;
+  address public immutable WETH;
 
   modifier lock() {
     require(unlocked == 1, "No reentrancy");
@@ -41,13 +41,13 @@ contract Pool is IPool, PoolERC20 {
   }
 
   modifier onlyEthPool() {
-    require(isETH, "Pool: Not a ETH pool");
+    require(token0 == WETH, "Pool: Not an ETH pool");
     _;
   }
 
   constructor() {
     factory = msg.sender;
-    (token0, token1, isETH) = IFactory(factory).getParams();
+    (token0, token1, WETH) = IFactory(factory).getParams();
     _mint(address(0), MINIMUM_LIQUIDITY, true);
   }
 
