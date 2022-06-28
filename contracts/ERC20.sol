@@ -3,24 +3,23 @@ pragma solidity ^0.8.0;
 
 import "./IERC20Metadata.sol";
 
-contract ERC20 is IERC20Metadata{
-
+contract ERC20 is IERC20Metadata {
   string public name;
   string public symbol;
   uint8 public decimals;
   uint256 public totalSupply;
-  mapping(address=>uint) private ownership;
-  mapping(address => mapping(address=>uint256)) private allowances;
+  mapping(address => uint256) private ownership;
+  mapping(address => mapping(address => uint256)) private allowances;
 
   event Mint(address to, uint256 amount);
   event Burn(address from, uint256 amount);
 
-  modifier validAddress (address myAddress) {
+  modifier validAddress(address myAddress) {
     require(myAddress != address(0), "Invalid address");
     _;
   }
 
-  constructor (string memory _name, string memory _symbol) {
+  constructor(string memory _name, string memory _symbol) {
     decimals = 18;
     name = _name;
     symbol = _symbol;

@@ -32,7 +32,7 @@ contract PairHelperClient {
   function swapExactOut0(uint256 amount0Out) external {
     pair.swapExactOut0(amount0Out);
   }
-  
+
   function swapExactOut1(uint256 amount1Out) external {
     pair.swapExactOut1(amount1Out);
   }
