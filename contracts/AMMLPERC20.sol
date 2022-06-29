@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.11;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract AMMLPERC20 {
+
+contract AMMLPERC20 is IERC20 {
 
     string public constant name = "AMM LP";
     string public constant symbol = "AMM LP";
@@ -10,9 +12,6 @@ contract AMMLPERC20 {
     uint  private _totalSupply;
     mapping(address => uint) private _balanceOf;
     mapping(address => mapping(address => uint)) public allowance;
-
-    event Approval(address indexed owner, address indexed spender, uint value);
-    event Transfer(address indexed from, address indexed to, uint value);
 
     constructor() {}
 
