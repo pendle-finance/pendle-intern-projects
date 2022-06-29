@@ -5,7 +5,6 @@ import "./interfaces/IAMMFactory.sol";
 import "./AMMPair.sol";
 
 contract AMMFactory is IAMMFactory {
-
   mapping(IERC20 => mapping(IERC20 => address)) public getPair;
   address[] public allPairs;
 
@@ -13,9 +12,9 @@ contract AMMFactory is IAMMFactory {
     return allPairs.length;
   }
 
-   function pairByIndex(uint256 index) external view returns (address pair){
-          return allPairs[index];
-      }
+  function pairByIndex(uint256 index) external view returns (address pair) {
+    return allPairs[index];
+  }
 
   function createPair(IERC20 tokenA, IERC20 tokenB) external returns (address pair) {
     require(tokenA != tokenB, "UniswapV2: IDENTICAL_ADDRESSES");
