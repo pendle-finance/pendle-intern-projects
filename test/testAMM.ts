@@ -271,27 +271,30 @@ describe("AMM Test", () => {
       await myPair.connect(Alice).addLiquidity(10000,10000,9000,9000);
     })
 
-    it("should take 5000 tokenA from Bob and return him 4000 tokenB.", async () => {
+    it("Fail swaps", async () => {
       console.log(await myPair.getMarginalPrice());  
-      // await expect(myPair.connect(Bob).swap(0, 0, Bob.address)).to.be.revertedWith("INSUFFICIENT_INPUT_AMOUNT");
       
-      await token0.connect(Bob).transfer(myPair.address, 5000);   
-      await expect(myPair.connect(Bob).swap(5001, 0, Bob.address)).to.be.revertedWith("INSUFFICIENT_INPUT_AMOUNT");   
-      await expect(myPair.connect(Bob).swap(0, 0, Bob.address)).to.be.revertedWith("INSUFFICIENT_OUTPUT_AMOUNT");
-      await expect(myPair.connect(Bob).swap(20000, 0, Bob.address)).to.be.revertedWith("INSUFFICIENT_LIQUIDITY");
-      await expect(myPair.connect(Bob).swap(1, 0, token0.address)).to.be.revertedWith("INVALID_TO");
-      await expect(myPair.connect(Bob).swap(1, 0, token1.address)).to.be.revertedWith("INVALID_TO");
-      await expect(myPair.connect(Bob).swap(0, 4001, Bob.address)).to.be.revertedWith("INSUFFICIENT_INPUT_AMOUNT: K");
-
-      await expect(myPair.connect(Bob).swap(0, 4000, Bob.address)).to.emit(myPair, 'Swap').withArgs(Bob.address, 5000, 0, 0, 4000, Bob.address);
-      
-
-      console.log(await myPair.getMarginalPrice());
-
-      await myPair.connect(Alice).removeLiquidity(5000, 0, 0);
-      console.log(await token0.balanceOf(Alice.address));  // should be "around" more than 5000 
-      console.log(await token1.balanceOf(Alice.address));  // should be "around" less than 5000 
+      await token0.connect(Bob).approve(myPair.address, 100000);   
+      await token1.connect(Bob).approve(myPair.address, 100000); 
+      await expect(myPair.connect(Bob).swapExactOut(5001, 0, Bob.address)).to.be.revertedWith("INSUFFICIENT_INPUT_AMOUNT");   
+      await expect(myPair.connect(Bob).swapExactOut(0, 0, Bob.address)).to.be.revertedWith("INSUFFICIENT_OUTPUT_AMOUNT");
+      await expect(myPair.connect(Bob).swapExactOut(1, 0, token0.address)).to.be.revertedWith("INVALID_TO");
+      await expect(myPair.connect(Bob).swapExactOut(1, 0, token1.address)).to.be.revertedWith("INVALID_TO");
+      await expect(myPair.connect(Bob).swapExactOut(0, 4001, Bob.address)).to.be.revertedWith("INSUFFICIENT_INPUT_AMOUNT: K");
     })
+
+    it("Using swapExactIn method", async () => {      
+      await token0.connect(Bob).approve(myPair.address, 5000);   
+
+      await expect(myPair.connect(Bob).swapExactIn(5000, 0, Bob.address)).to.emit(myPair, 'Swap').withArgs(Bob.address, 5000, 0, 0, 4000, Bob.address);
+    })
+
+    it("Using swapExactOut method", async () => {      
+      await token0.connect(Bob).approve(myPair.address, 5000); 
+
+      await expect(myPair.connect(Bob).swapExactOut(0, 4000, Bob.address)).to.emit(myPair, 'Swap').withArgs(Bob.address, 5000, 0, 0, 4000, Bob.address);
+    })
+    
   })
 
 

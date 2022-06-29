@@ -226,8 +226,8 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
     require(amount0In == 0 || amount1In == 0, "ONLY_1_TOKEN_INPUT_ALLOWED");
 
     (uint256 _reserve0, uint256 _reserve1) = getReserves(); // gas savings
-    uint amount0Out = _reserve0 - _quote(_reserve1+amount1In, _reserve0, _reserve1);
-    uint amount1Out = _reserve1 - _quote(_reserve0+amount0In, _reserve0, _reserve1);
+    uint amount0Out = _reserve0 - _quote(_reserve0, _reserve1+amount1In, _reserve1);
+    uint amount1Out = _reserve1 - _quote(_reserve0, _reserve0+amount0In, _reserve1);
     
     // Transfer both tokens to the Pair contract:
     SafeERC20.safeTransferFrom(token0, msg.sender, address(this), amount0In);
@@ -245,8 +245,8 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
     require(amount0Out == 0 || amount1Out == 0, "ONLY_1_TOKEN_OUTPUT_ALLOWED");
 
     (uint256 _reserve0, uint256 _reserve1) = getReserves(); // gas savings
-    uint amount1In = _quote(_reserve0-amount0Out, _reserve0, _reserve1) - _reserve1;
-    uint amount0In = _quote(_reserve1-amount0Out, _reserve0, _reserve1) - _reserve0;
+    uint amount1In = _quote(_reserve0, _reserve0-amount0Out, _reserve1) - _reserve1;
+    uint amount0In = _quote(_reserve0, _reserve1-amount1Out, _reserve1) - _reserve0;
     
     // Transfer both tokens to the Pair contract:
     SafeERC20.safeTransferFrom(token0, msg.sender, address(this), amount0In);
@@ -263,42 +263,5 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
   // @Desc: To return the spot trading price of the pool x100
   function getMarginalPrice() public view returns (uint256) {
     return ((reserve0 * 100) / reserve1);
-  }
-
-  function swap(
-    uint256 amount0Out,
-    uint256 amount1Out,
-    address to
-  ) public 
-  {
-    require(amount0Out > 0 || amount1Out > 0, "INSUFFICIENT_OUTPUT_AMOUNT");
-    (uint256 _reserve0, uint256 _reserve1) = getReserves(); // gas savings
-    require(amount0Out < _reserve0 && amount1Out < _reserve1, "INSUFFICIENT_LIQUIDITY");
-
-    uint256 balance0;
-    uint256 balance1;
-    {
-      // scope for _token{0,1}, avoids stack too deep errors
-      IERC20 _token0 = token0;
-      IERC20 _token1 = token1;
-      require(to != address(_token0) && to != address(_token1), "INVALID_TO");
-      if (amount0Out > 0) SafeERC20.safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
-      if (amount1Out > 0) SafeERC20.safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
-      // if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
-      balance0 = _token0.balanceOf(address(this));
-      balance1 = _token1.balanceOf(address(this));
-    }
-    uint256 amount0In = balance0 > _reserve0 - amount0Out
-      ? balance0 - (_reserve0 - amount0Out)
-      : 0;
-    uint256 amount1In = balance1 > _reserve1 - amount1Out
-      ? balance1 - (_reserve1 - amount1Out)
-      : 0;
-    require(amount0In > 0 || amount1In > 0, "INSUFFICIENT_INPUT_AMOUNT");
-
-    require(balance0 * balance1 >= _reserve0 * _reserve1, "INSUFFICIENT_INPUT_AMOUNT: K");
-
-    _update(balance0, balance1);
-    emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
   }
 }
