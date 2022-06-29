@@ -198,6 +198,7 @@ describe("AMM Test", () => {
       let adminBalance = await myPair.balanceOf(admin.address);
       aliceBalance = await myPair.balanceOf(Alice.address);
       bobBalance = await myPair.balanceOf(Bob.address);
+      console.log(adminBalance, aliceBalance, bobBalance)
 
       expect(adminBalance).to.be.eq(BigNumber.from(9000));
       expect(aliceBalance).to.be.eq(BigNumber.from(10000))

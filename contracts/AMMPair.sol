@@ -51,7 +51,7 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
     uint256 contributedAmt1 = newBalance1 - _reserves1;
 
     // Fetch total supply of LP tokens from AMMERC20:
-    uint256 curtotalSupply = totalSupply;
+    uint256 curtotalSupply = totalSupply();
 
     // Lock up Minimum Liquidty:
 
@@ -90,7 +90,7 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
         uint lpLiquidity,
         uint minAmtA,
         uint minAmtB) external virtual returns(uint amountA, uint amountB){
-          require(balanceOf[msg.sender] >= lpLiquidity, "Insufficient LP Tokens");
+          require(balanceOf(msg.sender) >= lpLiquidity, "Insufficient LP Tokens");
             // Send LP Liquidity back to pair contract:
           SafeERC20.safeTransferFrom(IERC20(address(this)), msg.sender, address(this), lpLiquidity);
            // Burn LP Tokens to receive back proportional tokenA and tokenB
@@ -145,9 +145,9 @@ contract AMMPair is IAMMPair, ReentrancyGuard, AMMLPERC20 {
     uint256 curBalance1 = _token1.balanceOf(address(this));
 
     // Store the LPLiquidity transferred in from external call 'removeLiquidity'
-    uint256 lpLiquidity = balanceOf[address(this)];
+    uint256 lpLiquidity = balanceOf(address(this));
 
-    uint256 curTotalSupply = totalSupply; // Total supply of LP tokens
+    uint256 curTotalSupply = totalSupply(); // Total supply of LP tokens
 
     // Distribute proportionally based on how much LP tokens are traded in relative to the total supply:
     contributedAmt0 = (lpLiquidity * curBalance0) / curTotalSupply;
